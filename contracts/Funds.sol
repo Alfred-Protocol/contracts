@@ -2,6 +2,11 @@
 pragma solidity ^0.8.9;
 
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {
+    FundHasStarted,
+    FundHasEnded,
+    FundHasNotEnded
+} from "./interfaces/Errors.sol";
 
 contract Funds {
 
@@ -11,6 +16,23 @@ contract Funds {
     uint256 matureDate;
 
     modifier beforeStartDate() {
+        if (block.timestamp > startDate) {
+            revert FundHasStarted(block.timestamp, startDate);
+        }
+        _;
+    }
+
+    modifier beforeEndDate() {
+        if (block.timestamp > matureDate) {
+            revert FundHasEnded(block.timestamp, matureDate);
+        }
+        _;
+    }
+
+    modifier afterStartDate() {
+        if (block.timestamp < matureDate) {
+            revert FundHasNotEnded(block.timestamp, matureDate);
+        }
         _;
     }
 

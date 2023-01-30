@@ -61,11 +61,15 @@ contract Funds is IFunds {
 
     function deposit(uint256 _amount) public beforeStartDate {
         totalValueLocked += _amount;
+        depositedAmount[msg.sender] += _amount;
         stablecoin.transferFrom(msg.sender, address(this), _amount);
     }
 
     function withdraw() public afterEndDate {
-        
+        uint256 entitledAmount = depositedAmount[msg.sender] * totalStablecoinAfterUnwind / totalValueLocked;
+        totalValueLocked -= depositedAmount[msg.sender];
+        depositedAmount[msg.sender] = 0;
+        stablecoin.transfer(msg.sender, entitledAmount);
     }
 
     function unwindAllPositions() public afterEndDate {

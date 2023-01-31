@@ -1,0 +1,15 @@
+diff --git a/node_modules/@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol b/node_modules/@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol
+index 023b266..db97932 100644
+--- a/node_modules/@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol
++++ b/node_modules/@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol
+@@ -2,8 +2,8 @@
+ pragma solidity >=0.7.5;
+ pragma abicoder v2;
+ 
+-import '@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol';
+-import '@openzeppelin/contracts/token/ERC721/IERC721Enumerable.sol';
++import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol';
++import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol';
+ 
+ import './IPoolInitializer.sol';
+ import './IERC721Permit.sol';

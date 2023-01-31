@@ -16,9 +16,9 @@ contract Funds is IFunds {
 
     IERC20Metadata stablecoin;
     UniswapAdapter adapter;
-    uint256 totalValueLocked;
-    uint256 startDate;
-    uint256 matureDate;
+    uint256 public totalValueLocked;
+    uint256 public startDate;
+    uint256 public matureDate;
     uint256 totalStablecoinAfterUnwind;
     mapping(address => uint256) public depositedAmount;
 

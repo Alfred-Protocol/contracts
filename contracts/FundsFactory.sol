@@ -5,12 +5,12 @@ import { Funds } from "./Funds.sol";
 
 contract FundsFactory {
 
-    mapping(address => address) public managerToAddress;
+    mapping(address => address) public managerToFundsAddress;
 
     constructor() {}
 
     function createNewFund(address _stablecoinAddress, uint256 _startDate, uint256 _matureDate, address _uniswapAdapterAddress) public {
         Funds fundsContract = new Funds(_stablecoinAddress, _startDate, _matureDate, _uniswapAdapterAddress);
-        managerToAddress[msg.sender] = address(fundsContract);
+        managerToFundsAddress[msg.sender] = address(fundsContract);
     }
 }

@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "./interfaces/ISwapRouter.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-periphery/contracts/base/LiquidityManagement.sol";
-
 
 contract UniswapAdapter is IERC721Receiver {
     ISwapRouter swapRouter;
@@ -46,26 +42,31 @@ contract UniswapAdapter is IERC721Receiver {
         // Naively set amountOutMinimum to 0. In production, use an oracle or other data source to choose a safer value for amountOutMinimum.
         // We also set the sqrtPriceLimitx96 to be 0 to ensure we swap our exact input amount.
         // Exact input token amount, output token is not specified
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-            .ExactInputSingleParams({
-                tokenIn: _tokenIn,
-                tokenOut: _tokenOut,
-                fee: poolFee,
-                recipient: msg.sender,
-                deadline: block.timestamp,
-                amountIn: _amountIn,
-                amountOutMinimum: 0,
-                // Slippage tolerance, calculate ith "quote" contract
-                sqrtPriceLimitX96: 0
-            });
-
-        amountOut = swapRouter.exactInputSingle(params);
+        {
+            amountOut = swapRouter.exactInputSingle(
+                ISwapRouter.ExactInputSingleParams({
+                    tokenIn: _tokenIn,
+                    tokenOut: _tokenOut,
+                    fee: poolFee,
+                    recipient: msg.sender,
+                    deadline: block.timestamp,
+                    amountIn: _amountIn,
+                    amountOutMinimum: 0,
+                    // Slippage tolerance, calculate ith "quote" contract
+                    sqrtPriceLimitX96: 0
+                })
+            );
+        }
 
         // Transfer tokenOut to msg.sender
         TransferHelper.safeTransfer(_tokenOut, msg.sender, amountOut);
     }
 
-    function _sendToOwner(uint256 tokenId, uint256 amount0, uint256 amount1) internal {
+    function _sendToOwner(
+        uint256 tokenId,
+        uint256 amount0,
+        uint256 amount1
+    ) internal {
         Deposit memory deposit = deposits[tokenId];
         // Transfer token0 to owner
         TransferHelper.safeTransfer(deposit.token0, deposit.owner, amount0);
@@ -76,18 +77,18 @@ contract UniswapAdapter is IERC721Receiver {
     function _createDeposit(address owner, uint256 tokenId) internal {
         // https://docs.uniswap.org/contracts/v3/reference/periphery/interfaces/INonfungiblePositionManager
         (
-            uint96 nonce,
-            address operator,
+            ,
+            ,
             address token0,
             address token1,
-            uint24 fee,
-            int24 tickLower,
-            int24 tickUpper,
+            ,
+            ,
+            ,
             uint128 liquidity,
-            uint256 feeGrowthInside0LastX128,
-            uint256 feeGrowthInside1LastX128,
-            uint128 tokensOwed0,
-            uint128 tokensOwed1
+            ,
+            ,
+            ,
+
         ) = nftPositionsManager.positions(tokenId);
 
         deposits[tokenId] = Deposit({
@@ -106,18 +107,18 @@ contract UniswapAdapter is IERC721Receiver {
         uint256 tokenId,
         bytes calldata
     ) external override returns (bytes4) {
-        _createDeposit(owner, tokenId);
+        _createDeposit(operator, tokenId);
 
         return this.onERC721Received.selector;
     }
 
     function mintPosition(
-        uint256 token0,
+        address token0,
         uint256 amount0ToMint,
-        uint256 token1,
+        address token1,
         uint256 amount1ToMint,
-        uint24 lowerTick,
-        uint24 upperTick
+        int24 lowerTick,
+        int24 upperTick
     )
         external
         returns (
@@ -129,13 +130,13 @@ contract UniswapAdapter is IERC721Receiver {
     {
         // Equal amounts of liquidity in both assets
         TransferHelper.safeTransferFrom(
-            amount0,
+            token0,
             msg.sender,
             address(this),
             amount0ToMint
         );
         TransferHelper.safeTransferFrom(
-            amount1,
+            token1,
             msg.sender,
             address(this),
             amount1ToMint
@@ -152,7 +153,6 @@ contract UniswapAdapter is IERC721Receiver {
             address(nftPositionsManager),
             amount1ToMint
         );
-
 
         // Mint position
         INonfungiblePositionManager.MintParams
@@ -174,12 +174,12 @@ contract UniswapAdapter is IERC721Receiver {
             });
 
         (tokenId, liquidity, amount0, amount1) = nftPositionsManager.mint(params);
-        
+
         _createDeposit(msg.sender, tokenId);
 
         // Refund any remaining tokens that were not used during LP minting
         if (amount0 < amount0ToMint) {
-            TransferHelper.safeApprove(token, address(nftPositionsManager), amount0);
+            TransferHelper.safeApprove(token0, address(nftPositionsManager), amount0);
             TransferHelper.safeTransfer(
                 token0,
                 msg.sender,
@@ -188,7 +188,7 @@ contract UniswapAdapter is IERC721Receiver {
         }
 
         if (amount1 < amount1ToMint) {
-            TransferHelper.safeApprove(token, address(nftPositionsManager), amount1);
+            TransferHelper.safeApprove(token1, address(nftPositionsManager), amount1);
             TransferHelper.safeTransfer(
                 token1,
                 msg.sender,
@@ -197,31 +197,29 @@ contract UniswapAdapter is IERC721Receiver {
         }
     }
 
-    function redeemPosition(
-        uint256 tokenId
-    ) external returns (
-        uint256 amount0,
-        uint256 amount1
-    ) {
+    function redeemPosition(uint256 tokenId)
+        external
+        returns (uint256 amount0, uint256 amount1)
+    {
         require(deposits[tokenId].owner == msg.sender, "Not owner of position");
 
         // Transfer NFT to this contract, msg.sender must havbe ownership of NFT
-        nftPositionsManager.safeTransferFrom(msg.sender, address(this), tokenId);
+        nftPositionsManager.safeTransferFrom(
+            msg.sender,
+            address(this),
+            tokenId
+        );
 
-        INonfungiblePositionManager.CollectParams memory params = 
+        (amount0, amount1) = nftPositionsManager.collect(
             INonfungiblePositionManager.CollectParams({
                 tokenId: tokenId,
                 recipient: msg.sender,
                 amount0Max: type(uint128).max,
                 amount1Max: type(uint128).max
-            });
-
-        (amount0, amount1) = nftPositionsManager.collect(params);
+            })
+        );
         _sendToOwner(tokenId, amount0, amount1);
 
-        return (
-            amount0,
-            amount1
-        );
+        return (amount0, amount1);
     }
 }

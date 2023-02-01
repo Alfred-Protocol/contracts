@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
+import "hardhat/console.sol";
+
 
 contract Swap {
     ISwapRouter swapRouter;
@@ -19,8 +21,11 @@ contract Swap {
         address _tokenOut,
         uint256 _amountIn
     ) external returns (uint256 amountOut) {
+        // Withdraw funds from user
+        TransferHelper.safeTransferFrom(_tokenIn, msg.sender, address(this), _amountIn);
         // Approve pool to spend tokenIn
         TransferHelper.safeApprove(_tokenIn, address(swapRouter), _amountIn);
+
 
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
             tokenIn: _tokenIn,
@@ -38,8 +43,5 @@ contract Swap {
         // We also set the sqrtPriceLimitx96 to be 0 to ensure we swap our exact input amount.
         // Exact input token amount, output token is not specified
         amountOut = swapRouter.exactInputSingle(params);
-
-        // Transfer tokenOut to msg.sender
-        TransferHelper.safeTransfer(_tokenOut, msg.sender, amountOut);
     }
 }

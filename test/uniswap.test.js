@@ -83,9 +83,6 @@ describe("Uniswap", () => {
 		await usdc.connect(addr1).approve(uniswapLp.address, usdcAmount);
 		await weth.connect(addr1).approve(uniswapLp.address, wethAmount);
 
-		console.log("amountInUsdc", await usdc.balanceOf(receiver));
-		console.log("amountInWeth", await weth.balanceOf(receiver));
-
 		await uniswapLp
 			.connect(addr1)
 			.mintPosition(

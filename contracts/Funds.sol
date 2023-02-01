@@ -5,7 +5,7 @@ import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/I
 import { LendingPoolAddressesProvider } from "./aave/ILendingPoolAddressesProvider.sol";
 import { ILendingPool } from "./aave/ILendingPool.sol";
 import { IFunds } from "./interfaces/IFunds.sol";
-import { UniswapAdapter } from "./uniswap/Adapter.sol";
+import { Swap } from "./uniswap/Swap.sol";
 import {
     FundHasStarted,
     FundHasEnded,
@@ -15,10 +15,10 @@ import {
 contract Funds is IFunds {
 
     IERC20Metadata stablecoin;
-    UniswapAdapter adapter;
-    uint256 totalValueLocked;
-    uint256 startDate;
-    uint256 matureDate;
+    Swap adapter;
+    uint256 public totalValueLocked;
+    uint256 public startDate;
+    uint256 public matureDate;
     uint256 totalStablecoinAfterUnwind;
     mapping(address => uint256) public depositedAmount;
 
@@ -56,7 +56,7 @@ contract Funds is IFunds {
         stablecoin = IERC20Metadata(_stablecoinAddress);
         startDate = _startDate;
         matureDate = _matureDate;
-        adapter = UniswapAdapter(_uniswapAdapterAddress);
+        adapter = Swap(_uniswapAdapterAddress);
     }
 
     function deposit(uint256 _amount) public beforeStartDate {

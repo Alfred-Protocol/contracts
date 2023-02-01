@@ -94,4 +94,41 @@ describe("Uniswap", () => {
 				MAX_TICK
 			);
 	});
+
+	it("Should mint & burn LP position", async () => {
+		const receiver = await addr1.getAddress();
+		const usdcAmount = ethers.utils.parseUnits("2000", stablecoinDecimals);
+		const wethAmount = ethers.utils.parseUnits("1", ethDecimals);
+
+		// Transfer USDC and WETH to receiver
+		await usdc.connect(usdcWhale).transfer(receiver, usdcAmount);
+		await weth.connect(wethWhale).transfer(addr1.address, wethAmount);
+
+		// Approve
+		await usdc.connect(addr1).approve(uniswapLp.address, usdcAmount);
+		await weth.connect(addr1).approve(uniswapLp.address, wethAmount);
+
+		const tx = await uniswapLp
+			.connect(addr1)
+			.mintPosition(
+				USDC_ADDRESS,
+				usdcAmount,
+				WETH_ADDRESS,
+				wethAmount,
+				MIN_TICK,
+				MAX_TICK
+			);
+
+		const receipt = await tx.wait();
+
+		const positionMintedEvent = receipt.events?.filter((x) => {
+			return x?.event == "PositionMinted";
+		});
+
+		expect(positionMintedEvent).to.be.not.null;
+		const tokenId = positionMintedEvent[0].args.tokenId;
+
+		// Burn position
+		await uniswapLp.connect(addr1).redeemPosition(tokenId);
+	});
 });

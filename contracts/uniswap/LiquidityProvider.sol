@@ -14,6 +14,8 @@ contract LiquidityProvider is IERC721Receiver {
 
     INonfungiblePositionManager public immutable nftPositionsManager;
 
+    event PositionMinted(uint256 tokenId);
+
     // 0.3% fee
     uint24 public constant poolFee = 3000;
 
@@ -27,6 +29,7 @@ contract LiquidityProvider is IERC721Receiver {
 
     // Map "tokenId" to "Deposit"
     mapping(uint256 => Deposit) public deposits;
+    
 
     constructor(address _nftPositionsManager) {
         nftPositionsManager = INonfungiblePositionManager(_nftPositionsManager);
@@ -131,6 +134,8 @@ contract LiquidityProvider is IERC721Receiver {
               amount1ToMint - amount1
           );
       }
+
+      emit PositionMinted(tokenId);
   }
 
   function redeemPosition(uint256 tokenId)

@@ -8,7 +8,11 @@ import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-periphery/contracts/base/LiquidityManagement.sol";
 
 contract LiquidityProvider is IERC721Receiver {
-    INonfungiblePositionManager nftPositionsManager;
+    int24 private constant MIN_TICK = -887272;
+    int24 private constant MAX_TICK = -MIN_TICK;
+    int24 private constant TICK_SPACING = 60;
+
+    INonfungiblePositionManager public immutable nftPositionsManager;
 
     // 0.3% fee
     uint24 public constant poolFee = 3000;
@@ -64,19 +68,7 @@ contract LiquidityProvider is IERC721Receiver {
 
       return this.onERC721Received.selector;
   }
-
-  function _transferAndApprove(
-      address token,
-      address from,
-      address to,
-      uint256 amount
-  ) internal {
-      // Equal amounts of liquidity in both assets
-      TransferHelper.safeTransferFrom(token, from, to, amount);
-      // Approve Uniswap to spend token0 and token1
-      TransferHelper.safeApprove(token, address(nftPositionsManager), amount);
-  }
-
+  
   function mintPosition(
       address token0,
       uint256 amount0ToMint,
@@ -93,9 +85,11 @@ contract LiquidityProvider is IERC721Receiver {
           uint256 amount1
       )
   {
-      // Transfer token pair to this contract, then approves Uniswap to spend them
-      _transferAndApprove(token0, msg.sender, address(this), amount0ToMint);
-      _transferAndApprove(token1, msg.sender, address(this), amount1ToMint);
+      TransferHelper.safeTransferFrom(token0, msg.sender, address(this), amount0ToMint);
+      TransferHelper.safeTransferFrom(token1, msg.sender, address(this), amount1ToMint);
+
+      TransferHelper.safeApprove(token0, address(nftPositionsManager), amount0ToMint);
+      TransferHelper.safeApprove(token1, address(nftPositionsManager), amount1ToMint);
 
       // Mint position
       INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams({
@@ -103,8 +97,8 @@ contract LiquidityProvider is IERC721Receiver {
           token1: token1,
           fee: poolFee,
           // Customize tickLower & tickUpper to optimize swap fees, depending on LP strategy
-          tickLower: lowerTick,
-          tickUpper: upperTick,
+          tickLower: (MIN_TICK / TICK_SPACING) * TICK_SPACING,
+          tickUpper: (MAX_TICK / TICK_SPACING) * TICK_SPACING,
           amount0Desired: amount0ToMint,
           amount1Desired: amount1ToMint,
           // Slippage, risky to front running attacks

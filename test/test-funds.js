@@ -14,7 +14,7 @@ describe("Funds Factory", function() {
         const FundsFactory = await ethers.getContractFactory("FundsFactory");
         fundsFactory = await FundsFactory.deploy();
 
-        const UniswapAdapter = await ethers.getContractFactory("UniswapAdapter");
+        const UniswapAdapter = await ethers.getContractFactory("Swap");
         // uniswap v3 router address passed as argument
         uniswapAdapter = await UniswapAdapter.deploy("0xE592427A0AEce92De3Edee1F18E0157C05861564");
 

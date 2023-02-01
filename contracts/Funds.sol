@@ -11,9 +11,9 @@ import {FundHasStarted, FundHasEnded, FundHasNotEnded} from "./interfaces/Errors
 contract Funds is IFunds {
     IERC20Metadata stablecoin;
     Swap adapter;
-    uint256 totalValueLocked;
-    uint256 startDate;
-    uint256 matureDate;
+    uint256 public totalValueLocked;
+    uint256 public startDate;
+    uint256 public matureDate;
     uint256 totalStablecoinAfterUnwind;
     mapping(address => uint256) public depositedAmount;
 

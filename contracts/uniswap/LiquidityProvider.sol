@@ -139,17 +139,10 @@ contract LiquidityProvider is IERC721Receiver {
   {
       require(deposits[tokenId].owner == msg.sender, "Not owner of position");
 
-      // Transfer NFT to this contract, msg.sender must havbe ownership of NFT
-      nftPositionsManager.safeTransferFrom(
-          msg.sender,
-          address(this),
-          tokenId
-      );
-
       (amount0, amount1) = nftPositionsManager.collect(
           INonfungiblePositionManager.CollectParams({
               tokenId: tokenId,
-              recipient: msg.sender,
+              recipient: address(this),
               amount0Max: type(uint128).max,
               amount1Max: type(uint128).max
           })

@@ -6,8 +6,11 @@ import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-periphery/contracts/base/LiquidityManagement.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
 contract LiquidityProvider is IERC721Receiver {
+    using EnumerableMap for EnumerableMap.UintToUintMap;
+
     int24 private constant MIN_TICK = -887272;
     int24 private constant MAX_TICK = -MIN_TICK;
     int24 private constant TICK_SPACING = 60;
@@ -20,20 +23,39 @@ contract LiquidityProvider is IERC721Receiver {
     uint24 public constant poolFee = 3000;
 
     // LP position
-    struct Deposit {
+    struct LPPosition {
         address owner;
         uint128 liquidity;
         address token0;
         address token1;
     }
 
-    // Map "tokenId" to "Deposit"
-    mapping(uint256 => Deposit) public deposits;
-    
+
+    // Map "tokenId" to "LPPosition"
+    mapping(uint256 => LPPosition) public tokenIdToLpPositions;
+    EnumerableMap.UintToUintMap private tokenIdToIndex;
+    uint256[] public lpPositionsTokenIds;
+
+    // Keep track of ERC20 token balances 
+    mapping(address => uint256) public tokenBalances;
+    address[] public tokenAddresses;
 
     constructor(address _nftPositionsManager) {
         nftPositionsManager = INonfungiblePositionManager(_nftPositionsManager);
     }
+
+    /**
+     * Returns the ERC20 token addresses and balances of the contract
+     */
+    function getTokenBalances() external view returns (address[] memory, uint256[] memory) {
+        uint256[] memory balances = new uint256[](tokenAddresses.length);
+        for (uint256 i = 0; i < tokenAddresses.length; i++) {
+            balances[i] = tokenBalances[tokenAddresses[i]];
+        }
+        return (tokenAddresses, balances);
+    }
+
+    
 
     function _createDeposit(address owner, uint256 tokenId) internal {
       // https://docs.uniswap.org/contracts/v3/reference/periphery/interfaces/INonfungiblePositionManager
@@ -51,13 +73,25 @@ contract LiquidityProvider is IERC721Receiver {
           ,
       ) = nftPositionsManager.positions(tokenId);
 
-      deposits[tokenId] = Deposit({
+      tokenIdToLpPositions[tokenId] = LPPosition({
           owner: owner,
           liquidity: liquidity,
           token0: token0,
           token1: token1
       });
-  }
+      EnumerableMap.set(tokenIdToIndex, tokenId, lpPositionsTokenIds.length);
+      lpPositionsTokenIds.push(tokenId);
+    }
+
+    function _removeDeposit(uint256 tokenId) internal {
+        uint256 lpPositionIndex = EnumerableMap.get(tokenIdToIndex, tokenId);
+
+        // Empty, ignore "0" tokenId
+        lpPositionsTokenIds[lpPositionIndex] = 0;
+        EnumerableMap.remove(tokenIdToIndex, tokenId);
+        delete tokenIdToLpPositions[tokenId];
+    }
+
 
   // V3 position is represented by NFT minted from Uniswap V3 NFT Position Manager
   // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/IERC721Receiver.sol
@@ -142,7 +176,7 @@ contract LiquidityProvider is IERC721Receiver {
       external
       returns (uint256 amount0, uint256 amount1)
   {
-      require(deposits[tokenId].owner == msg.sender, "Not owner of position");
+      require(tokenIdToLpPositions[tokenId].owner == msg.sender, "Not owner of position");
 
       (amount0, amount1) = nftPositionsManager.collect(
           INonfungiblePositionManager.CollectParams({
@@ -152,7 +186,10 @@ contract LiquidityProvider is IERC721Receiver {
               amount1Max: type(uint128).max
           })
       );
+
       _sendToOwner(tokenId, amount0, amount1);
+      _removeDeposit(tokenId);
+
 
       return (amount0, amount1);
   }
@@ -162,10 +199,17 @@ contract LiquidityProvider is IERC721Receiver {
       uint256 amount0,
       uint256 amount1
   ) internal {
-      Deposit memory deposit = deposits[tokenId];
+      LPPosition memory deposit = tokenIdToLpPositions[tokenId];
       // Transfer token0 to owner
       TransferHelper.safeTransfer(deposit.token0, deposit.owner, amount0);
       // Transfer token1 to owner
       TransferHelper.safeTransfer(deposit.token1, deposit.owner, amount1);
+  }
+
+  /**
+   * Returns the list of LP positions tokenIds 
+   */
+  function getLpPositionsTokenIds() public returns (uint256[] memory) {
+    return lpPositionsTokenIds;
   }
 }

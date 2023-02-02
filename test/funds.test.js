@@ -1,10 +1,13 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { UNI_NFT_MANAGER } = require("../constants/index");
+
+const UNI_SWAP_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
 
 describe("Funds Factory", function () {
 	let assetManager, user;
 	let fundsFactory;
-	let uniswapAdapter;
+	let uniswapAdapter, uniswapNftAdapter;
 	let funds;
 	let stablecoin, stablecoinDecimals, stablecoinAddress;
 
@@ -16,9 +19,13 @@ describe("Funds Factory", function () {
 
 		const UniswapAdapter = await ethers.getContractFactory("Swap");
 		// uniswap v3 router address passed as argument
-		uniswapAdapter = await UniswapAdapter.deploy(
-			"0xE592427A0AEce92De3Edee1F18E0157C05861564"
+		uniswapAdapter = await UniswapAdapter.deploy(UNI_SWAP_ROUTER);
+
+		// Handle minting & burning of NFT LP positions
+		const UniswapNftAdapter = await ethers.getContractFactory(
+			"LiquidityProvider"
 		);
+		uniswapNftAdapter = await UniswapNftAdapter.deploy(UNI_NFT_MANAGER);
 
 		stablecoinAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"; // USDC Ethereum mainnet address
 		stablecoin = await ethers.getContractAt(
@@ -37,7 +44,8 @@ describe("Funds Factory", function () {
 			stablecoinAddress,
 			startDate,
 			endDate,
-			uniswapAdapter.address
+			uniswapAdapter.address,
+			uniswapNftAdapter.address
 		);
 
 		const fundsAddress = await fundsFactory.managerToFundsAddress(

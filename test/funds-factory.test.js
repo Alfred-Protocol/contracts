@@ -1,10 +1,11 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { UNI_NFT_MANAGER } = require("../constants/index");
 
 describe("Funds Factory", function () {
 	let assetManager;
 	let fundsFactory;
-	let uniswapAdapter;
+	let uniswapAdapter, uniswapNftAdapter;
 
 	beforeEach(async function () {
 		[assetManager] = await ethers.getSigners();
@@ -17,6 +18,11 @@ describe("Funds Factory", function () {
 		uniswapAdapter = await UniswapAdapter.deploy(
 			"0xE592427A0AEce92De3Edee1F18E0157C05861564"
 		);
+
+		const UniswapNftAdapter = await ethers.getContractFactory(
+			"LiquidityProvider"
+		);
+		uniswapNftAdapter = await UniswapNftAdapter.deploy(UNI_NFT_MANAGER);
 	});
 
 	it("Should be able to create a new funds", async function () {
@@ -32,7 +38,8 @@ describe("Funds Factory", function () {
 			stablecoinAddress,
 			startDate,
 			endDate,
-			uniswapAdapter.address
+			uniswapAdapter.address,
+			uniswapNftAdapter.address
 		);
 
 		const fundsAddress = await fundsFactory.managerToFundsAddress(

@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const { ethers, network } = require("hardhat");
+const { UNI_NFT_MANAGER } = require("../constants/index");
 
 const stablecoinDecimals = 6;
 const ethDecimals = 18;
@@ -12,7 +13,6 @@ const USDC_WHALE = "0x6555e1CC97d3cbA6eAddebBCD7Ca51d75771e0B8";
 const WETH_WHALE = "0x6555e1CC97d3cbA6eAddebBCD7Ca51d75771e0B8";
 
 const UNI_SWAP_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
-const UNI_NFT_MANAGER = "0xC36442b4a4522E871399CD717aBDD847Ab11FE88";
 
 const MIN_TICK = -887272;
 const MAX_TICK = -MIN_TICK;

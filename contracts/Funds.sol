@@ -11,7 +11,8 @@ import {LiquidityProvider} from "./uniswap/LiquidityProvider.sol";
 import {FundHasStarted, FundHasEnded, FundHasNotEnded} from "./interfaces/Errors.sol";
 
 contract Funds is IFunds {
-    IERC20Metadata stablecoin;
+    IERC20Metadata public immutable stablecoin;
+
     Swap immutable swapAdapter;
     LiquidityProvider immutable liquidityProvider;
 
@@ -20,8 +21,9 @@ contract Funds is IFunds {
     uint256 public matureDate;
     uint256 public totalStablecoinAfterUnwind;
 
-    // Map "owner" to "stablecoin balance"
+    // Keep track of stable coin balances for each user
     mapping(address => uint256) public depositedAmount;
+    address[] depositors;
 
     modifier beforeStartDate() {
         if (block.timestamp > startDate) {
@@ -71,7 +73,12 @@ contract Funds is IFunds {
 
     function deposit(uint256 _amount) public beforeStartDate {
         totalValueLocked += _amount;
+        // New depositor
+        if (depositedAmount[msg.sender] == 0) {
+            depositors.push(msg.sender);
+        }
         depositedAmount[msg.sender] += _amount;
+        // Assume user has already approved the transfer
         stablecoin.transferFrom(msg.sender, address(this), _amount);
     }
 
@@ -117,13 +124,28 @@ contract Funds is IFunds {
         );
     }
 
-    function redeemAllLpPositions() public {
+    function redeemLpPosition(uint256 tokenId) public _onlyFundManager {
+        liquidityProvider.redeemPosition(tokenId);
+    }
+
+    // Anyone can call this function to redeem the LP position
+    function redeemAllLpPositions() public afterEndDate {
         uint256[] memory tokenIds = liquidityProvider.getLpPositionsTokenIds();
         for (uint256 i = 0; i < tokenIds.length; i++) {
             liquidityProvider.redeemPosition(tokenIds[i]);
         }
-        // send to "owner" through wormhole
-        //
+        (
+            address[] memory tokenAddresses,
+            uint256[] memory balances
+        ) = liquidityProvider.getTokenBalances();
+
+        // Swap all ERC20 tokens to stable coin to return back to user
+        for (uint256 i = 0; i < tokenAddresses.length; i++) {
+            if (tokenAddresses[i] != address(stablecoin)) {
+                swapTokens(tokenAddresses[i], address(stablecoin), balances[i]);
+            }
+        }
+        totalStablecoinAfterUnwind = stablecoin.balanceOf(address(this));
     }
 
     function fetchAllLpPositions() public returns (uint256[] memory) {
@@ -131,6 +153,7 @@ contract Funds is IFunds {
     }
 
     // Returns how much "stable" token the user has deposited
+    // TODO: Make it dynamic with current yields from LP positions
     function getPortfolioByAddress(address _address)
         public
         view

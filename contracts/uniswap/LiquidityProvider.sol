@@ -19,6 +19,7 @@ contract LiquidityProvider is IERC721Receiver {
     // 0.3% fee
     uint24 public constant poolFee = 3000;
 
+
     // LP position
     struct Deposit {
         address owner;
@@ -29,7 +30,8 @@ contract LiquidityProvider is IERC721Receiver {
 
     // Map "tokenId" to "Deposit"
     mapping(uint256 => Deposit) public deposits;
-    
+    uint256[] public lpPositionsTokenIds;
+
 
     constructor(address _nftPositionsManager) {
         nftPositionsManager = INonfungiblePositionManager(_nftPositionsManager);
@@ -57,6 +59,8 @@ contract LiquidityProvider is IERC721Receiver {
           token0: token0,
           token1: token1
       });
+
+    lpPositionsTokenIds.push(tokenId);
   }
 
   // V3 position is represented by NFT minted from Uniswap V3 NFT Position Manager
@@ -142,8 +146,6 @@ contract LiquidityProvider is IERC721Receiver {
       external
       returns (uint256 amount0, uint256 amount1)
   {
-      require(deposits[tokenId].owner == msg.sender, "Not owner of position");
-
       (amount0, amount1) = nftPositionsManager.collect(
           INonfungiblePositionManager.CollectParams({
               tokenId: tokenId,
@@ -152,6 +154,7 @@ contract LiquidityProvider is IERC721Receiver {
               amount1Max: type(uint128).max
           })
       );
+
       _sendToOwner(tokenId, amount0, amount1);
 
       return (amount0, amount1);
@@ -167,5 +170,12 @@ contract LiquidityProvider is IERC721Receiver {
       TransferHelper.safeTransfer(deposit.token0, deposit.owner, amount0);
       // Transfer token1 to owner
       TransferHelper.safeTransfer(deposit.token1, deposit.owner, amount1);
+  }
+
+  /**
+   * Returns the list of LP positions tokenIds 
+   */
+  function getLpPositionsTokenIds() public returns (uint256[] memory) {
+    return lpPositionsTokenIds;
   }
 }

@@ -6,15 +6,21 @@ import {LendingPoolAddressesProvider} from "./aave/ILendingPoolAddressesProvider
 import {ILendingPool} from "./aave/ILendingPool.sol";
 import {IFunds} from "./interfaces/IFunds.sol";
 import {Swap} from "./uniswap/Swap.sol";
+import {LiquidityProvider} from "./uniswap/LiquidityProvider.sol";
+
 import {FundHasStarted, FundHasEnded, FundHasNotEnded} from "./interfaces/Errors.sol";
 
 contract Funds is IFunds {
     IERC20Metadata stablecoin;
-    Swap adapter;
+    Swap immutable swapAdapter;
+    LiquidityProvider immutable liquidityProvider;
+
     uint256 public totalValueLocked;
     uint256 public startDate;
     uint256 public matureDate;
-    uint256 totalStablecoinAfterUnwind;
+    uint256 public totalStablecoinAfterUnwind;
+
+    // Map "owner" to "stablecoin balance"
     mapping(address => uint256) public depositedAmount;
 
     modifier beforeStartDate() {
@@ -38,11 +44,17 @@ contract Funds is IFunds {
         _;
     }
 
+    modifier _onlyFundManager() {
+        // TODO: Whitelisting strategy to only allow fund manager to call this function
+        _;
+    }
+
     constructor(
         address _stablecoinAddress,
         uint256 _startDate,
         uint256 _matureDate,
-        address _uniswapAdapterAddress
+        address _uniswapswapAdapterAddress,
+        address _uniswapNonFungiblePositionManagerAddress
     ) {
         require(
             _startDate < _matureDate,
@@ -51,7 +63,10 @@ contract Funds is IFunds {
         stablecoin = IERC20Metadata(_stablecoinAddress);
         startDate = _startDate;
         matureDate = _matureDate;
-        adapter = Swap(_uniswapAdapterAddress);
+        swapAdapter = Swap(_uniswapswapAdapterAddress);
+        liquidityProvider = LiquidityProvider(
+            _uniswapNonFungiblePositionManagerAddress
+        );
     }
 
     function deposit(uint256 _amount) public beforeStartDate {
@@ -68,7 +83,108 @@ contract Funds is IFunds {
         stablecoin.transfer(msg.sender, entitledAmount);
     }
 
-    function unwindAllPositions() public afterEndDate {}
+    function unwindAllPositions() public afterEndDate {
+        // Burn LP NFTs
+        // Transfer to intended receiver
+    }
+
+    function swapTokens(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) public {
+        swapAdapter.swap(_from, _to, _amount);
+    }
+
+    /**
+     * @dev Creates a liquidity position on Uniswap V3
+     */
+    function createLpPosition(
+        address token0,
+        address token1,
+        uint256 amount0,
+        uint256 amount1,
+        int24 lowerTick,
+        int24 upperTick
+    ) public _onlyFundManager {
+        liquidityProvider.mintPosition(
+            token0,
+            amount0,
+            token1,
+            amount1,
+            lowerTick,
+            upperTick
+        );
+    }
+
+    function redeemAllLpPositions() public {
+        uint256[] memory tokenIds = liquidityProvider.getLpPositionsTokenIds();
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            liquidityProvider.redeemPosition(tokenIds[i]);
+        }
+        // send to "owner" through wormhole
+        //
+    }
+
+    function fetchAllLpPositions() public returns (uint256[] memory) {
+        return liquidityProvider.getLpPositionsTokenIds();
+    }
+
+    // Returns how much "stable" token the user has deposited
+    function getPortfolioByAddress(address _address)
+        public
+        view
+        returns (uint256)
+    {
+        return depositedAmount[_address];
+    }
+
+    /**
+     * deprecated
+     */
+    function borrowFromAave(address _underlyingAssetAddress, uint256 _amount)
+        public
+    {
+        // get lending pool address (Ethereum mainnet)
+        address lendingPoolAddress = LendingPoolAddressesProvider(
+            0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5
+        ).getLendingPool();
+
+        // borrow cryptoassets from lending pool - use stable interest rate
+        ILendingPool(lendingPoolAddress).borrow(
+            _underlyingAssetAddress,
+            _amount,
+            1,
+            0,
+            address(this)
+        );
+    }
+
+    /**
+     * deprecated
+     */
+    function repayToAave(address _underlyingAssetAddress, uint256 _amount)
+        public
+    {
+        // get lending pool address (Ethereum mainnet)
+        address lendingPoolAddress = LendingPoolAddressesProvider(
+            0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5
+        ).getLendingPool();
+
+        // allow lending pool to burn debt token
+        IERC20Metadata(_underlyingAssetAddress).approve(
+            lendingPoolAddress,
+            _amount
+        );
+
+        // repay borrow amount
+        ILendingPool(lendingPoolAddress).repay(
+            _underlyingAssetAddress,
+            _amount,
+            1,
+            address(this)
+        );
+    }
 
     function supplyToAave(address _underlyingAssetAddress, uint256 _amount)
         public
@@ -107,54 +223,5 @@ contract Funds is IFunds {
             _amount,
             address(this)
         );
-    }
-
-    function borrowFromAave(address _underlyingAssetAddress, uint256 _amount)
-        public
-    {
-        // get lending pool address (Ethereum mainnet)
-        address lendingPoolAddress = LendingPoolAddressesProvider(
-            0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5
-        ).getLendingPool();
-
-        // borrow cryptoassets from lending pool - use stable interest rate
-        ILendingPool(lendingPoolAddress).borrow(
-            _underlyingAssetAddress,
-            _amount,
-            1,
-            0,
-            address(this)
-        );
-    }
-
-    function repayToAave(address _underlyingAssetAddress, uint256 _amount)
-        public
-    {
-        // get lending pool address (Ethereum mainnet)
-        address lendingPoolAddress = LendingPoolAddressesProvider(
-            0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5
-        ).getLendingPool();
-
-        // allow lending pool to burn debt token
-        IERC20Metadata(_underlyingAssetAddress).approve(
-            lendingPoolAddress,
-            _amount
-        );
-
-        // repay borrow amount
-        ILendingPool(lendingPoolAddress).repay(
-            _underlyingAssetAddress,
-            _amount,
-            1,
-            address(this)
-        );
-    }
-
-    function swapTokens(
-        address _from,
-        address _to,
-        uint256 _amount
-    ) public {
-        adapter.swap(_from, _to, _amount);
     }
 }

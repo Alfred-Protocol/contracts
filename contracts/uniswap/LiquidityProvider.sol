@@ -128,14 +128,22 @@ contract LiquidityProvider is IERC721Receiver {
       TransferHelper.safeApprove(token0, address(nftPositionsManager), amount0ToMint);
       TransferHelper.safeApprove(token1, address(nftPositionsManager), amount1ToMint);
 
+      if (lowerTick == 0) {
+        lowerTick = (MIN_TICK / TICK_SPACING) * TICK_SPACING;
+      }
+
+      if (upperTick == 0) {
+        upperTick = (MAX_TICK / TICK_SPACING) * TICK_SPACING;
+      }
+
       // Mint position
       INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams({
           token0: token0,
           token1: token1,
           fee: poolFee,
           // Customize tickLower & tickUpper to optimize swap fees, depending on LP strategy
-          tickLower: (MIN_TICK / TICK_SPACING) * TICK_SPACING,
-          tickUpper: (MAX_TICK / TICK_SPACING) * TICK_SPACING,
+          tickLower: lowerTick,
+          tickUpper: upperTick,
           amount0Desired: amount0ToMint,
           amount1Desired: amount1ToMint,
           // Slippage, risky to front running attacks
@@ -209,7 +217,7 @@ contract LiquidityProvider is IERC721Receiver {
   /**
    * Returns the list of LP positions tokenIds 
    */
-  function getLpPositionsTokenIds() public returns (uint256[] memory) {
+  function getLpPositionsTokenIds() public view returns (uint256[] memory) {
     return lpPositionsTokenIds;
   }
 }

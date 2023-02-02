@@ -1,6 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const { UNI_NFT_MANAGER } = require("../constants/index");
+const { UNI_NFT_MANAGER, USDC_ADDRESS } = require("../constants/index");
 
 describe("Funds Factory", function () {
 	let assetManager;
@@ -26,7 +26,7 @@ describe("Funds Factory", function () {
 	});
 
 	it("Should be able to create a new funds", async function () {
-		const stablecoinAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"; // USDC Ethereum mainnet address
+		const stablecoinAddress = USDC_ADDRESS; // USDC Ethereum mainnet address
 
 		// timestamp
 		const blockNumber = await ethers.provider.getBlockNumber();

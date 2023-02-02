@@ -25,6 +25,8 @@ contract Funds is IFunds {
     mapping(address => uint256) public depositedAmount;
     address[] depositors;
 
+    event PositionMinted(uint256 tokenId);
+
     modifier beforeStartDate() {
         if (block.timestamp > startDate) {
             revert FundHasStarted(block.timestamp, startDate);
@@ -100,6 +102,7 @@ contract Funds is IFunds {
         address _to,
         uint256 _amount
     ) public {
+        stablecoin.approve(address(swapAdapter), _amount);
         swapAdapter.swap(_from, _to, _amount);
     }
 
@@ -114,14 +117,24 @@ contract Funds is IFunds {
         int24 lowerTick,
         int24 upperTick
     ) public _onlyFundManager {
-        liquidityProvider.mintPosition(
-            token0,
-            amount0,
-            token1,
-            amount1,
-            lowerTick,
-            upperTick
-        );
+        IERC20Metadata(token0).approve(address(liquidityProvider), amount0);
+        IERC20Metadata(token1).approve(address(liquidityProvider), amount1);
+
+        (
+            uint256 tokenId,
+            uint128 liquidity,
+            uint256 amount0,
+            uint256 amount1
+        ) = liquidityProvider.mintPosition(
+                token0,
+                amount0,
+                token1,
+                amount1,
+                lowerTick,
+                upperTick
+            );
+
+        emit PositionMinted(tokenId);
     }
 
     function redeemLpPosition(uint256 tokenId) public _onlyFundManager {
@@ -148,7 +161,7 @@ contract Funds is IFunds {
         totalStablecoinAfterUnwind = stablecoin.balanceOf(address(this));
     }
 
-    function fetchAllLpPositions() public returns (uint256[] memory) {
+    function fetchAllLpPositions() public view returns (uint256[] memory) {
         return liquidityProvider.getLpPositionsTokenIds();
     }
 

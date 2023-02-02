@@ -1,21 +1,19 @@
 const { expect } = require("chai");
 const { ethers, network } = require("hardhat");
-const { UNI_NFT_MANAGER } = require("../constants/index");
+const {
+	UNI_NFT_MANAGER,
+	WETH_ADDRESS,
+	USDC_ADDRESS,
+} = require("../constants/index");
 
 const stablecoinDecimals = 6;
 const ethDecimals = 18;
-
-const USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-const WETH_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
 // https://www.whalestats.com/analysis-of-the-top-100-eth-wallets
 const USDC_WHALE = "0x6555e1CC97d3cbA6eAddebBCD7Ca51d75771e0B8";
 const WETH_WHALE = "0x6555e1CC97d3cbA6eAddebBCD7Ca51d75771e0B8";
 
 const UNI_SWAP_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
-
-const MIN_TICK = -887272;
-const MAX_TICK = -MIN_TICK;
 
 describe("Uniswap", () => {
 	let addr1;
@@ -85,14 +83,10 @@ describe("Uniswap", () => {
 
 		await uniswapLp
 			.connect(addr1)
-			.mintPosition(
-				USDC_ADDRESS,
-				usdcAmount,
-				WETH_ADDRESS,
-				wethAmount,
-				MIN_TICK,
-				MAX_TICK
-			);
+			.mintPosition(USDC_ADDRESS, usdcAmount, WETH_ADDRESS, wethAmount, 0, 0);
+
+		const tokenIds = await uniswapLp.connect(addr1).getLpPositionsTokenIds();
+		expect(tokenIds.length).to.be.gt(0);
 	});
 
 	it("Should mint & burn LP position", async () => {
@@ -110,14 +104,7 @@ describe("Uniswap", () => {
 
 		const tx = await uniswapLp
 			.connect(addr1)
-			.mintPosition(
-				USDC_ADDRESS,
-				usdcAmount,
-				WETH_ADDRESS,
-				wethAmount,
-				MIN_TICK,
-				MAX_TICK
-			);
+			.mintPosition(USDC_ADDRESS, usdcAmount, WETH_ADDRESS, wethAmount, 0, 0);
 
 		const receipt = await tx.wait();
 
@@ -130,5 +117,10 @@ describe("Uniswap", () => {
 
 		// Burn position
 		await uniswapLp.connect(addr1).redeemPosition(tokenId);
+
+		const tokenIds = await uniswapLp.connect(addr1).getLpPositionsTokenIds();
+		const nonZeroTokenIds = tokenIds.filter((x) => x != 0);
+
+		expect(nonZeroTokenIds.length).to.be.eq(0);
 	});
 });

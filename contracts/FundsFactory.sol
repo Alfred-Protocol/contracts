@@ -6,6 +6,7 @@ import {Funds} from "./Funds.sol";
 contract FundsFactory {
     mapping(address => Funds) public managerToFundsAddress;
     Funds[] public funds;
+    address[] public fundAddresses;
 
     address private uniswapAdapterAddress;
     address private uniswapNonFungiblePositionManagerAddress;
@@ -28,10 +29,12 @@ contract FundsFactory {
             _startDate,
             _matureDate,
             uniswapAdapterAddress,
-            uniswapNonFungiblePositionManagerAddress
+            uniswapNonFungiblePositionManagerAddress,
+            msg.sender
         );
         managerToFundsAddress[msg.sender] = fundsContract;
         funds.push(fundsContract);
+        fundAddresses.push(address(fundsContract));
     }
 
     function getAllFunds() public view returns (Funds[] memory) {

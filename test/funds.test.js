@@ -18,9 +18,6 @@ describe("Funds Factory", function () {
 	beforeEach(async function () {
 		[assetManager, user] = await ethers.getSigners();
 
-		const FundsFactory = await ethers.getContractFactory("FundsFactory");
-		fundsFactory = await FundsFactory.deploy();
-
 		const UniswapAdapter = await ethers.getContractFactory("Swap");
 		// uniswap v3 router address passed as argument
 		uniswapAdapter = await UniswapAdapter.deploy(UNI_SWAP_ROUTER);
@@ -30,6 +27,12 @@ describe("Funds Factory", function () {
 			"LiquidityProvider"
 		);
 		uniswapNftAdapter = await UniswapNftAdapter.deploy(UNI_NFT_MANAGER);
+
+		const FundsFactory = await ethers.getContractFactory("FundsFactory");
+		fundsFactory = await FundsFactory.deploy(
+			uniswapAdapter.address,
+			uniswapNftAdapter.address
+		);
 
 		stablecoinAddress = USDC_ADDRESS; // USDC Ethereum mainnet address
 		stablecoin = await ethers.getContractAt(
@@ -44,16 +47,12 @@ describe("Funds Factory", function () {
 		const startDate = block.timestamp + 3600 * 24 * 30;
 		const endDate = startDate + 3600 * 24 * 30;
 
-		await fundsFactory.createNewFund(
-			stablecoinAddress,
-			startDate,
-			endDate,
-			uniswapAdapter.address,
-			uniswapNftAdapter.address
-		);
+		await fundsFactory
+			.connect(assetManager)
+			.createNewFund(stablecoinAddress, startDate, endDate);
 
 		const fundsAddress = await fundsFactory.managerToFundsAddress(
-			assetManager.address
+			await assetManager.getAddress()
 		);
 
 		// deploy a new fund instance
@@ -69,7 +68,7 @@ describe("Funds Factory", function () {
 		await stablecoin
 			.connect(usdcWhale)
 			.transfer(
-				user.address,
+				await user.getAddress(),
 				ethers.utils.parseUnits("10000", stablecoinDecimals)
 			);
 	});

@@ -29,7 +29,8 @@ contract FundsFactory {
             _startDate,
             _matureDate,
             uniswapAdapterAddress,
-            uniswapNonFungiblePositionManagerAddress
+            uniswapNonFungiblePositionManagerAddress,
+            msg.sender
         );
         managerToFundsAddress[msg.sender] = fundsContract;
         funds.push(fundsContract);
@@ -37,7 +38,7 @@ contract FundsFactory {
     }
 
     function getAllFunds() public view returns (Funds[] memory) {
-        return (funds, fundAddresses);
+        return funds;
     }
 
     function getFundsByManager(address _manager) public view returns (Funds) {

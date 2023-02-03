@@ -5,7 +5,8 @@
     "@openzeppelin/contracts": "^4.8.1",
     "@uniswap/v3-core": "github:Uniswap/v3-core#0.8",
     "@uniswap/v3-periphery": "github:Uniswap/v3-periphery#0.8",
-    "hardhat": "^2.12.6"
+    "hardhat": "^2.12.6",
+    "hardhat-abi-exporter": "^2.10.1"
   },
   "dependencies": {
     "dotenv": "^16.0.3"

@@ -21,6 +21,9 @@ contract Funds is IFunds {
     uint256 public matureDate;
     uint256 public totalStablecoinAfterUnwind;
 
+    // Owner of the fund
+    address public fundManager;
+
     // Keep track of stable coin balances for each user
     mapping(address => uint256) public depositedAmount;
     address[] depositors;
@@ -58,7 +61,8 @@ contract Funds is IFunds {
         uint256 _startDate,
         uint256 _matureDate,
         address _uniswapswapAdapterAddress,
-        address _uniswapNonFungiblePositionManagerAddress
+        address _uniswapNonFungiblePositionManagerAddress,
+        address _fundManager
     ) {
         require(
             _startDate < _matureDate,
@@ -71,6 +75,7 @@ contract Funds is IFunds {
         liquidityProvider = LiquidityProvider(
             _uniswapNonFungiblePositionManagerAddress
         );
+        fundManager = _fundManager;
     }
 
     function deposit(uint256 _amount) public beforeStartDate {

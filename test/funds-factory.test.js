@@ -10,9 +10,6 @@ describe("Funds Factory", function () {
 	beforeEach(async function () {
 		[assetManager] = await ethers.getSigners();
 
-		const FundsFactory = await ethers.getContractFactory("FundsFactory");
-		fundsFactory = await FundsFactory.deploy();
-
 		const UniswapAdapter = await ethers.getContractFactory("Swap");
 		// uniswap v3 router address passed as argument
 		uniswapAdapter = await UniswapAdapter.deploy(
@@ -23,6 +20,12 @@ describe("Funds Factory", function () {
 			"LiquidityProvider"
 		);
 		uniswapNftAdapter = await UniswapNftAdapter.deploy(UNI_NFT_MANAGER);
+
+		const FundsFactory = await ethers.getContractFactory("FundsFactory");
+		fundsFactory = await FundsFactory.deploy(
+			uniswapAdapter.address,
+			uniswapNftAdapter.address
+		);
 	});
 
 	it("Should be able to create a new funds", async function () {
@@ -34,13 +37,9 @@ describe("Funds Factory", function () {
 		const startDate = block.timestamp;
 		const endDate = startDate + 3600 * 24 * 30;
 
-		await fundsFactory.createNewFund(
-			stablecoinAddress,
-			startDate,
-			endDate,
-			uniswapAdapter.address,
-			uniswapNftAdapter.address
-		);
+		await fundsFactory
+			.connect(assetManager)
+			.createNewFund(stablecoinAddress, startDate, endDate);
 
 		const fundsAddress = await fundsFactory.managerToFundsAddress(
 			assetManager.address

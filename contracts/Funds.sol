@@ -125,19 +125,14 @@ contract Funds is IFunds {
         IERC20Metadata(token0).approve(address(liquidityProvider), amount0);
         IERC20Metadata(token1).approve(address(liquidityProvider), amount1);
 
-        (
-            uint256 tokenId,
-            uint128 liquidity,
-            uint256 amount0,
-            uint256 amount1
-        ) = liquidityProvider.mintPosition(
-                token0,
-                amount0,
-                token1,
-                amount1,
-                lowerTick,
-                upperTick
-            );
+        (uint256 tokenId, , , ) = liquidityProvider.mintPosition(
+            token0,
+            amount0,
+            token1,
+            amount1,
+            lowerTick,
+            upperTick
+        );
 
         emit PositionMinted(tokenId);
     }

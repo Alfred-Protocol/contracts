@@ -50,9 +50,13 @@ describe("Funds", function () {
 			.connect(assetManager)
 			.createNewFund(stablecoinAddress, startDate, endDate);
 
-		const fundsAddress = await fundsFactory.managerToFundsAddress(
+		const fundsAddresses = await fundsFactory.getFundsByManager(
 			await assetManager.getAddress()
 		);
+
+		expect(fundsAddresses.length).to.equal(1);
+
+		const fundsAddress = fundsAddresses[0];
 
 		// deploy a new fund instance
 		funds = await ethers.getContractAt("Funds", fundsAddress);

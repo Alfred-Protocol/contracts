@@ -1,5 +1,6 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
+require("hardhat-abi-exporter");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -41,5 +42,13 @@ module.exports = {
 			url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY_MUMBAI}`,
 			accounts: [process.env.MUMBAI_PRIVATE_KEY],
 		},
+	},
+	abiExporter: {
+		path: "./data/abi",
+		runOnCompile: true,
+		clear: true,
+		flat: true,
+		spacing: 2,
+		pretty: true,
 	},
 };

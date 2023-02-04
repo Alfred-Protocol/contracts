@@ -1,8 +1,8 @@
 const { ethers, run } = require("hardhat");
+const { UNI_SWAP_ROUTER_ADDRESS } = require("../constants/index");
 
 const NonfungiblePositionManagerAddress =
 	"0xC36442b4a4522E871399CD717aBDD847Ab11FE88";
-const SwapRouterAddress = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
 
 async function main() {
 	const [deployer] = await ethers.getSigners();
@@ -12,7 +12,7 @@ async function main() {
 
 	const FundsFactory = await ethers.getContractFactory("FundsFactory");
 	const fundsFactory = await FundsFactory.deploy(
-		SwapRouterAddress,
+		UNI_SWAP_ROUTER_ADDRESS,
 		NonfungiblePositionManagerAddress
 	);
 

@@ -1,6 +1,10 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const { UNI_NFT_MANAGER, USDC_ADDRESS } = require("../constants/index");
+const {
+	UNI_NFT_MANAGER,
+	USDC_ADDRESS,
+	UNI_SWAP_ROUTER_ADDRESS,
+} = require("../constants/index");
 
 describe("Funds Factory", function () {
 	let assetManager;
@@ -12,9 +16,7 @@ describe("Funds Factory", function () {
 
 		const UniswapAdapter = await ethers.getContractFactory("Swap");
 		// uniswap v3 router address passed as argument
-		uniswapAdapter = await UniswapAdapter.deploy(
-			"0xE592427A0AEce92De3Edee1F18E0157C05861564"
-		);
+		uniswapAdapter = await UniswapAdapter.deploy(UNI_SWAP_ROUTER_ADDRESS);
 
 		const UniswapNftAdapter = await ethers.getContractFactory(
 			"LiquidityProvider"

@@ -4,11 +4,10 @@ const {
 	UNI_NFT_MANAGER,
 	WETH_ADDRESS,
 	USDC_ADDRESS,
+	UNI_SWAP_ROUTER_ADDRESS,
 } = require("../constants/index");
 
-const UNI_SWAP_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
-
-describe("Funds Factory", function () {
+describe("Funds", function () {
 	let assetManager, user;
 	let fundsFactory;
 	let uniswapAdapter, uniswapNftAdapter;
@@ -20,7 +19,7 @@ describe("Funds Factory", function () {
 
 		const UniswapAdapter = await ethers.getContractFactory("Swap");
 		// uniswap v3 router address passed as argument
-		uniswapAdapter = await UniswapAdapter.deploy(UNI_SWAP_ROUTER);
+		uniswapAdapter = await UniswapAdapter.deploy(UNI_SWAP_ROUTER_ADDRESS);
 
 		// Handle minting & burning of NFT LP positions
 		const UniswapNftAdapter = await ethers.getContractFactory(

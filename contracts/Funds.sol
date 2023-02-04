@@ -123,7 +123,8 @@ contract Funds is IFunds {
         uint256 amount0,
         uint256 amount1,
         int24 lowerTick,
-        int24 upperTick
+        int24 upperTick,
+        uint24 poolFee
     ) public _onlyFundManager {
         IERC20Metadata(token0).approve(address(liquidityProvider), amount0);
         IERC20Metadata(token1).approve(address(liquidityProvider), amount1);
@@ -134,7 +135,8 @@ contract Funds is IFunds {
             token1,
             amount1,
             lowerTick,
-            upperTick
+            upperTick,
+            poolFee
         );
 
         emit PositionMinted(tokenId);

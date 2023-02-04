@@ -6,10 +6,13 @@ import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-periphery/contracts/base/LiquidityManagement.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+
+import "hardhat/console.sol";
+
 
 contract LiquidityProvider is IERC721Receiver {
-    using EnumerableMap for EnumerableMap.UintToUintMap;
+    using EnumerableSet for EnumerableSet.UintSet;
 
     int24 private constant MIN_TICK = -887272;
     int24 private constant MAX_TICK = -MIN_TICK;
@@ -18,10 +21,11 @@ contract LiquidityProvider is IERC721Receiver {
     address public fundAddress;
     INonfungiblePositionManager public immutable nftPositionsManager;
 
+    /**
+     * Define events here
+     */
     event PositionMinted(uint256 tokenId);
-
-    // 0.3% fee
-    uint24 public constant poolFee = 3000;
+    event PositionLiquidityModified(uint256 tokenId, uint128 liquidity);
 
     // LP position
     struct LPPosition {
@@ -30,12 +34,12 @@ contract LiquidityProvider is IERC721Receiver {
         uint128 liquidity;
         address token0;
         address token1;
+        uint256 tokenId;
     }
 
     // Map "tokenId" to "LPPosition"
     mapping(uint256 => LPPosition) public tokenIdToLpPositions;
-    EnumerableMap.UintToUintMap private tokenIdToIndex;
-    uint256[] public lpPositionsTokenIds;
+    EnumerableSet.UintSet private lpPositionsTokenIds;
 
     // Keep track of ERC20 token balances 
     mapping(address => uint256) public tokenBalances;
@@ -45,18 +49,6 @@ contract LiquidityProvider is IERC721Receiver {
         fundAddress = msg.sender;
         nftPositionsManager = INonfungiblePositionManager(_nftPositionsManager);
     }
-
-    /**
-     * Returns the ERC20 token addresses and balances of the contract
-     */
-    function getTokenBalances() external view returns (address[] memory, uint256[] memory) {
-        uint256[] memory balances = new uint256[](tokenAddresses.length);
-        for (uint256 i = 0; i < tokenAddresses.length; i++) {
-            balances[i] = tokenBalances[tokenAddresses[i]];
-        }
-        return (tokenAddresses, balances);
-    }
-
 
     function _createDeposit(address owner, uint256 tokenId) internal {
       // https://docs.uniswap.org/contracts/v3/reference/periphery/interfaces/INonfungiblePositionManager
@@ -78,19 +70,37 @@ contract LiquidityProvider is IERC721Receiver {
           owner: owner,
           liquidity: liquidity,
           token0: token0,
-          token1: token1
+          token1: token1,
+          tokenId: tokenId
       });
-      EnumerableMap.set(tokenIdToIndex, tokenId, lpPositionsTokenIds.length);
-      lpPositionsTokenIds.push(tokenId);
+      EnumerableSet.add(lpPositionsTokenIds, tokenId);
     }
 
-    function _removeDeposit(uint256 tokenId) internal {
-        uint256 lpPositionIndex = EnumerableMap.get(tokenIdToIndex, tokenId);
+    function _setLiquidity(uint256 tokenId, uint128 liquidity) internal {
+        tokenIdToLpPositions[tokenId].liquidity = liquidity;
+        emit PositionLiquidityModified(tokenId, liquidity);
+    }
 
-        // Empty, ignore "0" tokenId
-        lpPositionsTokenIds[lpPositionIndex] = 0;
-        EnumerableMap.remove(tokenIdToIndex, tokenId);
+    function _decreaseLiquidity(uint256 tokenId, uint128 liquidity) internal {
+        uint128 prevLiquidity = tokenIdToLpPositions[tokenId].liquidity;
+        _setLiquidity(tokenId, prevLiquidity - liquidity);
+    }
+
+    function _removeLPPosition(uint256 tokenId) internal {
+        EnumerableSet.remove(lpPositionsTokenIds, tokenId);
         delete tokenIdToLpPositions[tokenId];
+    }
+
+    function _sendToOwner(
+        uint256 tokenId,
+        uint256 amount0,
+        uint256 amount1
+    ) internal {
+        LPPosition memory deposit = tokenIdToLpPositions[tokenId];
+        // Transfer token0 to owner
+        TransferHelper.safeTransfer(deposit.token0, deposit.owner, amount0);
+        // Transfer token1 to owner
+        TransferHelper.safeTransfer(deposit.token1, deposit.owner, amount1);
     }
 
 
@@ -107,13 +117,37 @@ contract LiquidityProvider is IERC721Receiver {
         return this.onERC721Received.selector;
     }
 
+    /**
+     * Returns the ERC20 token addresses and balances of the contract
+     */
+    function getTokenBalances() external view returns (address[] memory, uint256[] memory) {
+        uint256[] memory balances = new uint256[](tokenAddresses.length);
+        for (uint256 i = 0; i < tokenAddresses.length; i++) {
+            balances[i] = tokenBalances[tokenAddresses[i]];
+        }
+        return (tokenAddresses, balances);
+    }
+
+    /**
+     * Returns the LP positions of the contract
+     */
+    function getActiveLpPositions() external view returns (LPPosition[] memory) {
+        LPPosition[] memory activeLpPositions = new LPPosition[](EnumerableSet.length(lpPositionsTokenIds));
+        for (uint256 i = 0; i < activeLpPositions.length; i++) {
+            activeLpPositions[i] = tokenIdToLpPositions[EnumerableSet.at(lpPositionsTokenIds, i)];
+        }
+        return activeLpPositions;
+    }
+
+
     function mintPosition(
         address token0,
         uint256 amount0ToMint,
         address token1,
         uint256 amount1ToMint,
         int24 lowerTick,
-        int24 upperTick
+        int24 upperTick,
+        uint24 poolFee
     )
         external
         returns (
@@ -198,45 +232,46 @@ contract LiquidityProvider is IERC721Receiver {
         );
 
         _sendToOwner(tokenId, amount0, amount1);
-        _removeDeposit(tokenId);
+        _removeLPPosition(tokenId);
 
 
         return (amount0, amount1);
     }
 
-  function increasePositionLiquidity(
-    uint256 tokenId,
-    uint256 amount0ToMint,
-    uint256 amount1ToMint,
-    address fundManager
-  ) public returns (
-    uint128 liquidity,
-    uint256 amount0,
-    uint256 amount1
-  ) {
-    require(tokenIdToLpPositions[tokenId].owner == fundManager, "Not owner of position");
+    function increasePositionLiquidity(
+        uint256 tokenId,
+        uint256 amount0ToMint,
+        uint256 amount1ToMint,
+        address fundManager
+    ) public returns (
+        uint128 liquidity,
+        uint256 amount0,
+        uint256 amount1
+    ) {
+        require(tokenIdToLpPositions[tokenId].owner == fundManager, "Not owner of position");
 
-    // Require that the caller is the fund manager & has approved the tokens
-    TransferHelper.safeTransferFrom(tokenIdToLpPositions[tokenId].token0, msg.sender, address(this), amount0ToMint);
-    TransferHelper.safeTransferFrom(tokenIdToLpPositions[tokenId].token1, msg.sender, address(this), amount1ToMint);
+        // Require that the caller is the fund manager & has approved the tokens
+        TransferHelper.safeTransferFrom(tokenIdToLpPositions[tokenId].token0, msg.sender, address(this), amount0ToMint);
+        TransferHelper.safeTransferFrom(tokenIdToLpPositions[tokenId].token1, msg.sender, address(this), amount1ToMint);
 
-    TransferHelper.safeApprove(tokenIdToLpPositions[tokenId].token0, address(nftPositionsManager), amount0ToMint);
-    TransferHelper.safeApprove(tokenIdToLpPositions[tokenId].token1, address(nftPositionsManager), amount1ToMint);
+        TransferHelper.safeApprove(tokenIdToLpPositions[tokenId].token0, address(nftPositionsManager), amount0ToMint);
+        TransferHelper.safeApprove(tokenIdToLpPositions[tokenId].token1, address(nftPositionsManager), amount1ToMint);
 
-    (liquidity, amount0, amount1) = nftPositionsManager.increaseLiquidity(
-      INonfungiblePositionManager.IncreaseLiquidityParams({
-        tokenId: tokenId,
-        amount0Desired: amount0ToMint,
-        amount1Desired: amount1ToMint,
-        amount0Min: 0,
-        amount1Min: 0,
-        deadline: block.timestamp
-      })
-    );
+        (liquidity, amount0, amount1) = nftPositionsManager.increaseLiquidity(
+        INonfungiblePositionManager.IncreaseLiquidityParams({
+            tokenId: tokenId,
+            amount0Desired: amount0ToMint,
+            amount1Desired: amount1ToMint,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: block.timestamp
+        })
+        );
 
+        _setLiquidity(tokenId, liquidity);
 
-    return (liquidity, amount0, amount1);
-  }
+        return (liquidity, amount0, amount1);
+    }
 
     function decreasePositionLiquidity(
         uint256 tokenId,
@@ -247,7 +282,7 @@ contract LiquidityProvider is IERC721Receiver {
         uint256 amount1
     ) {
         require(tokenIdToLpPositions[tokenId].owner == fundManager, "Not owner of position");
-    
+
         (amount0, amount1) = nftPositionsManager.decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: tokenId,
@@ -258,28 +293,30 @@ contract LiquidityProvider is IERC721Receiver {
             })
         );
 
-        TransferHelper.safeTransfer(tokenIdToLpPositions[tokenId].token0, fundAddress, amount0);
-        TransferHelper.safeTransfer(tokenIdToLpPositions[tokenId].token1, fundAddress, amount1);
+        _decreaseLiquidity(tokenId, liquidity);
 
+        console.log("tokenIdToLpPositions[tokenId]", tokenIdToLpPositions[tokenId].token0);
+
+        console.log("amount0", amount0);
+        console.log("amount1", amount1);
+
+        console.log("balance(amount0)", IERC20(tokenIdToLpPositions[tokenId].token0).balanceOf(address(this)));
+        console.log("balance(amount1)", IERC20(tokenIdToLpPositions[tokenId].token1).balanceOf(address(this)));
+        _sendToOwner(tokenId, amount0, amount1);
+    
         return (amount0, amount1);
     }
 
-  function _sendToOwner(
-      uint256 tokenId,
-      uint256 amount0,
-      uint256 amount1
-  ) internal {
-      LPPosition memory deposit = tokenIdToLpPositions[tokenId];
-      // Transfer token0 to owner
-      TransferHelper.safeTransfer(deposit.token0, deposit.owner, amount0);
-      // Transfer token1 to owner
-      TransferHelper.safeTransfer(deposit.token1, deposit.owner, amount1);
-  }
 
-  /**
-   * Returns the list of LP positions tokenIds 
-   */
-  function getLpPositionsTokenIds() public view returns (uint256[] memory) {
-    return lpPositionsTokenIds;
-  }
+    /**
+    * Returns the list of LP positions tokenIds 
+    */
+    function getLpPositionsTokenIds() public view returns (uint256[] memory) {
+        uint256[] memory lpPositionsTokenIdsArr = new uint256[](EnumerableSet.length(lpPositionsTokenIds));
+        for (uint256 i = 0; i < lpPositionsTokenIdsArr.length; i++) {
+        lpPositionsTokenIdsArr[i] = EnumerableSet.at(lpPositionsTokenIds, i);
+        }
+        return lpPositionsTokenIdsArr;
+    }
+
 }

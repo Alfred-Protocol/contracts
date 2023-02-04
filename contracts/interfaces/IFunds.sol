@@ -45,7 +45,8 @@ interface IFunds {
         uint256 amount0,
         uint256 amount1,
         int24 lowerTick,
-        int24 upperTick
+        int24 upperTick,
+        uint24 poolFee
     ) external;
 
     /**

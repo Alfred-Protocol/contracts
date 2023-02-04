@@ -7,6 +7,8 @@ const {
 	UNI_SWAP_ROUTER_ADDRESS,
 } = require("../constants/index");
 
+const POOL_FEE = 3000;
+
 describe("Funds", function () {
 	let assetManager, user;
 	let fundsFactory;
@@ -167,7 +169,8 @@ describe("Funds", function () {
 			ethers.utils.parseUnits("500", stablecoinDecimals),
 			ethers.utils.parseUnits("0.25", 18),
 			0,
-			0
+			0,
+			POOL_FEE
 		);
 	});
 
@@ -217,7 +220,8 @@ describe("Funds", function () {
 			ethers.utils.parseUnits("500", stablecoinDecimals),
 			ethers.utils.parseUnits("0.25", 18),
 			0,
-			0
+			0,
+			POOL_FEE
 		);
 
 		const receipt = await tx.wait();

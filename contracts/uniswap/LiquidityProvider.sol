@@ -60,7 +60,8 @@ contract LiquidityProvider is IERC721Receiver {
         token1: token1,
         tokenId: tokenId,
         tickLower: tickLower,
-        tickUpper: tickUpper
+        tickUpper: tickUpper,
+        poolFee: fee
       });
       EnumerableSet.add(lpPositionsTokenIds, tokenId);
     }

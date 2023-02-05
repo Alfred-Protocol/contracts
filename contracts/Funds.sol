@@ -278,10 +278,7 @@ contract Funds is IFunds {
         }
 
         for (uint256 i = 0; i < EnumerableMap.length(tokenToAmount); i++) {
-            (address tokenAddress, uint256 tokenBalance) = EnumerableMap.at(
-                tokenToAmount,
-                i
-            );
+            (address tokenAddress, ) = EnumerableMap.at(tokenToAmount, i);
 
             if (
                 tokenAddress != address(0) &&

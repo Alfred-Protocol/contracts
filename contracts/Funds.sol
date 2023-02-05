@@ -9,7 +9,6 @@ import {Swap} from "./uniswap/Swap.sol";
 import {LiquidityProvider} from "./uniswap/LiquidityProvider.sol";
 import {EnumerableMap} from "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import {SharedStructs} from "./uniswap/Structs.sol";
-
 import {FundHasStarted, FundHasEnded, FundHasNotEnded, CallerIsNotFundManager} from "./interfaces/Errors.sol";
 
 contract Funds is IFunds {
@@ -159,7 +158,8 @@ contract Funds is IFunds {
         address _to,
         uint256 _amount
     ) public {
-        stablecoin.approve(address(swapAdapter), _amount);
+        IERC20Metadata(_from).approve(address(swapAdapter), _amount);
+
         uint256 amountOut = swapAdapter.swap(_from, _to, _amount);
 
         _decreaseTokenBalance(_from, _amount);
@@ -202,7 +202,7 @@ contract Funds is IFunds {
         emit PositionMinted(tokenId);
     }
 
-    function redeemLpPosition(uint256 tokenId) public afterEndDate {
+    function collectFees(uint256 tokenId) public {
         (
             uint256 amount0,
             uint256 amount1,
@@ -215,7 +215,7 @@ contract Funds is IFunds {
     }
 
     // Close LP position
-    function closeLpPosition(uint256 tokenId) public _onlyFundManager {
+    function closeLpPosition(uint256 tokenId) public {
         SharedStructs.LPPosition memory lpPos = liquidityProvider
             .getLpPositionDetails(tokenId);
 
@@ -270,7 +270,7 @@ contract Funds is IFunds {
     }
 
     // Anyone can call this function to redeem the LP position
-    function redeemAllLpPositions() public afterEndDate _onlyFundManager {
+    function redeemAllLpPositions() public afterEndDate {
         uint256[] memory tokenIds = liquidityProvider.getLpPositionsTokenIds();
         for (uint256 i = 0; i < tokenIds.length; i++) {
             // Collect fees, decrease liquidity & burn NFT
@@ -282,15 +282,31 @@ contract Funds is IFunds {
                 tokenToAmount,
                 i
             );
-            if (tokenAddress != address(stablecoin)) {
-                swapTokens(tokenAddress, address(stablecoin), tokenBalance);
+
+            if (
+                tokenAddress != address(0) &&
+                tokenAddress != address(stablecoin)
+            ) {
+                swapTokens(
+                    tokenAddress,
+                    address(stablecoin),
+                    IERC20Metadata(tokenAddress).balanceOf(address(this))
+                );
             }
         }
 
         totalStablecoinAfterUnwind = stablecoin.balanceOf(address(this));
     }
 
-    function fetchAllLpPositions() public view returns (uint256[] memory) {
+    function fetchAllLpPositions()
+        public
+        view
+        returns (SharedStructs.LPPosition[] memory)
+    {
+        return liquidityProvider.getActiveLpPositions();
+    }
+
+    function fetchLpTokenIds() public view returns (uint256[] memory) {
         return liquidityProvider.getLpPositionsTokenIds();
     }
 }

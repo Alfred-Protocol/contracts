@@ -264,7 +264,6 @@ describe("Uniswap", () => {
 			.connect(addr1)
 			.getActiveLpPositions();
 		expect(activeLpPositions.length).to.be.gt(0);
-		console.log(activeLpPositions);
 	});
 
 	it("Should mint & collect LP fees", async () => {
@@ -347,9 +346,3 @@ describe("Uniswap", () => {
 		await uniswapLp.connect(addr1).burnPosition(tokenId);
 	});
 });
-
-/**
- * 2. Review "functions" to see what can be removed and what can be added
- * 4. Look into hard-coded TICK_SPACINGS
- * 5. Write tests for "unwinding" all positions in fund
- */

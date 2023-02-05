@@ -7,17 +7,15 @@ import "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-periphery/contracts/base/LiquidityManagement.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import {SharedStructs} from "./Structs.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 
 import "hardhat/console.sol";
 
-
 contract LiquidityProvider is IERC721Receiver {
     using EnumerableSet for EnumerableSet.UintSet;
-
-    int24 private constant MIN_TICK = -887272;
-    int24 private constant MAX_TICK = -MIN_TICK;
     int24 private constant TICK_SPACING = 60;
 
     address public fundAddress;
@@ -46,9 +44,9 @@ contract LiquidityProvider is IERC721Receiver {
           ,
           address token0,
           address token1,
-          ,
-          ,
-          ,
+          uint24 fee,
+          int24 tickLower,
+          int24 tickUpper,
           uint128 liquidity,
           ,
           ,
@@ -56,11 +54,13 @@ contract LiquidityProvider is IERC721Receiver {
       ) = nftPositionsManager.positions(tokenId);
 
       tokenIdToLpPositions[tokenId] = SharedStructs.LPPosition({
-          fundManager: fundManager,
-          liquidity: liquidity,
-          token0: token0,
-          token1: token1,
-          tokenId: tokenId
+        fundManager: fundManager,
+        liquidity: liquidity,
+        token0: token0,
+        token1: token1,
+        tokenId: tokenId,
+        tickLower: tickLower,
+        tickUpper: tickUpper
       });
       EnumerableSet.add(lpPositionsTokenIds, tokenId);
     }
@@ -93,17 +93,15 @@ contract LiquidityProvider is IERC721Receiver {
         TransferHelper.safeTransfer(deposit.token1, fundAddress, amount1);
     }
 
-
+    
     // V3 position is represented by NFT minted from Uniswap V3 NFT Position Manager
     // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/IERC721Receiver.sol
     function onERC721Received(
-        address operator,
+        address,
         address,
         uint256 tokenId,
         bytes calldata
-    ) external override returns (bytes4) {
-        _createDeposit(operator, tokenId);
-
+    ) external pure override returns (bytes4) {
         return this.onERC721Received.selector;
     }
 
@@ -113,7 +111,8 @@ contract LiquidityProvider is IERC721Receiver {
     function getActiveLpPositions() external view returns (SharedStructs.LPPosition[] memory) {
         SharedStructs.LPPosition[] memory activeLpPositions = new SharedStructs.LPPosition[](EnumerableSet.length(lpPositionsTokenIds));
         for (uint256 i = 0; i < activeLpPositions.length; i++) {
-            activeLpPositions[i] = tokenIdToLpPositions[EnumerableSet.at(lpPositionsTokenIds, i)];
+            uint256 tokenId = EnumerableSet.at(lpPositionsTokenIds, i);
+            activeLpPositions[i] = tokenIdToLpPositions[tokenId];
         }
         return activeLpPositions;
     }
@@ -160,13 +159,14 @@ contract LiquidityProvider is IERC721Receiver {
         TransferHelper.safeApprove(token0, address(nftPositionsManager), amount0ToMint);
         TransferHelper.safeApprove(token1, address(nftPositionsManager), amount1ToMint);
 
-            
+        // Research more on "ticks" and its relationship with "price"
+        // Why is it necessary to round the tick to the nearest multiple of TICK_SPACING?
         if (lowerTick == 0) {
-            lowerTick = (MIN_TICK / TICK_SPACING) * TICK_SPACING;
+            lowerTick = (TickMath.MIN_TICK / TICK_SPACING) * TICK_SPACING;
         }
 
         if (upperTick == 0) {
-            upperTick = (MAX_TICK / TICK_SPACING) * TICK_SPACING;
+            upperTick = (TickMath.MAX_TICK / TICK_SPACING) * TICK_SPACING;
         }
 
         // Mint position
@@ -297,10 +297,17 @@ contract LiquidityProvider is IERC721Receiver {
         return (amount0, amount1, lpPosition.token0, lpPosition.token1);
     }
 
+    function transferToFund(
+        address token,
+        uint256 amount
+    ) public {
+        TransferHelper.safeTransfer(token, fundAddress, amount);
+    }
+
     function burnPosition(
         uint256 tokenId
     ) public {
         nftPositionsManager.burn(tokenId);
+        EnumerableSet.remove(lpPositionsTokenIds, tokenId);
     }
-
 }

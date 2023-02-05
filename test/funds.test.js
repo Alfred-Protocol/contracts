@@ -72,11 +72,13 @@ describe("Funds", function () {
 		const usdcWhale = ethers.provider.getSigner(
 			"0xda9ce944a37d218c3302f6b82a094844c6eceb17"
 		);
+
 		await stablecoin
 			.connect(usdcWhale)
 			.transfer(
 				await user.getAddress(),
-				ethers.utils.parseUnits("10000", stablecoinDecimals)
+				ethers.utils.parseUnits("10000", stablecoinDecimals),
+				{ gasLimit: "100000" }
 			);
 	});
 
@@ -178,7 +180,7 @@ describe("Funds", function () {
 		);
 	});
 
-	it("User should deposit, swap, LP & burn", async function () {
+	it("User should deposit, swap, LP & collect fees", async function () {
 		const depositAmount = ethers.utils.parseUnits("1000", stablecoinDecimals);
 		const stablecoinBalanceBefore = await stablecoin.balanceOf(user.address);
 		await depositToFundsContract(stablecoin, funds, user, depositAmount);
@@ -241,12 +243,84 @@ describe("Funds", function () {
 		await time.increase(2 * 3600 * 24 * 30 + 1);
 
 		// Burn position
-		await funds.connect(assetManager).redeemLpPosition(tokenId);
+		await funds.connect(assetManager).collectFees(tokenId);
 	});
 
 	// User should deposit, swap, LP, close position and withdraw
+	it("User should deposit, swap, LP, burn & withdraw", async function () {
+		const depositAmount = ethers.utils.parseUnits("1000", stablecoinDecimals);
+		const stablecoinBalanceBefore = await stablecoin.balanceOf(user.address);
+		await depositToFundsContract(stablecoin, funds, user, depositAmount);
+		const stablecoinBalanceAfter = await stablecoin.balanceOf(user.address);
 
-	// Multiple users should deposit, swap, LP, close position and withdraw
+		expect(await funds.totalValueLocked()).to.equal(depositAmount);
+		expect(await funds.depositedAmount(user.address)).to.equal(depositAmount);
+		expect(stablecoinBalanceBefore.sub(stablecoinBalanceAfter)).to.equal(
+			depositAmount
+		);
+
+		const wethToken = await ethers.getContractAt("IERC20", WETH_ADDRESS);
+		const usdcToken = await ethers.getContractAt("IERC20", USDC_ADDRESS);
+
+		// swap USDC to WETH
+		usdcToken
+			.connect(assetManager)
+			.approve(funds.address, ethers.constants.MaxUint256);
+
+		await funds
+			.connect(assetManager)
+			.swapTokens(
+				USDC_ADDRESS,
+				WETH_ADDRESS,
+				ethers.utils.parseUnits("500", stablecoinDecimals)
+			);
+
+		const wethBalance = await wethToken.balanceOf(funds.address);
+		expect(wethBalance).to.be.gt(ethers.utils.parseUnits("0"));
+
+		// add liquidity
+		usdcToken
+			.connect(assetManager)
+			.approve(funds.address, ethers.constants.MaxUint256);
+
+		wethToken
+			.connect(assetManager)
+			.approve(funds.address, ethers.constants.MaxUint256);
+
+		const tx = await funds.createLpPosition(
+			USDC_ADDRESS,
+			WETH_ADDRESS,
+			ethers.utils.parseUnits("500", stablecoinDecimals),
+			ethers.utils.parseUnits("0.25", 18),
+			0,
+			0,
+			POOL_FEE
+		);
+
+		const receipt = await tx.wait();
+
+		const positionMintedEvent = receipt.events?.filter((x) => {
+			return x?.event == "PositionMinted";
+		});
+
+		expect(positionMintedEvent).to.be.not.null;
+		const tokenId = positionMintedEvent[0]?.args?.tokenId;
+
+		// advance time to wait for position to be open
+		await time.increase(2 * 3600 * 24 * 30 + 1);
+
+		// Close position, so user can withdraw
+		await time.increase(3600 * 24 * 30 + 1);
+
+		await funds.connect(assetManager).redeemAllLpPositions();
+
+		await funds.connect(user).withdraw();
+		const stablecoinBalanceAfterWithdraw = await stablecoin.balanceOf(
+			funds.address
+		);
+
+		expect(stablecoinBalanceAfterWithdraw).to.equal(0);
+	});
 });
 
 async function depositToFundsContract(stablecoin, funds, user, depositAmount) {

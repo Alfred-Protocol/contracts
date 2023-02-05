@@ -48,7 +48,7 @@ interface IFunds {
      * @notice for fund manager to redeem fees & liquidity position in Uniswap
      * @param tokenId id of the liquidity position to be redeemed
      */
-    function redeemLpPosition(uint256 tokenId) external;
+    function collectFees(uint256 tokenId) external;
 
     /**
      * @notice for anyone to redeem all liquidity positions in Uniswap

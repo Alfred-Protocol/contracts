@@ -1,5 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { time } = require("@nomicfoundation/hardhat-network-helpers");
+
 const {
 	UNI_NFT_MANAGER,
 	WETH_ADDRESS,
@@ -81,11 +83,13 @@ describe("Funds", function () {
 	it("User should be able to deposit stablecoin", async function () {
 		const depositAmount = ethers.utils.parseUnits("1000", stablecoinDecimals);
 		const stablecoinBalanceBefore = await stablecoin.balanceOf(user.address);
+
 		await depositToFundsContract(stablecoin, funds, user, depositAmount);
 		const stablecoinBalanceAfter = await stablecoin.balanceOf(user.address);
 
 		expect(await funds.totalValueLocked()).to.equal(depositAmount);
 		expect(await funds.depositedAmount(user.address)).to.equal(depositAmount);
+
 		expect(stablecoinBalanceBefore.sub(stablecoinBalanceAfter)).to.equal(
 			depositAmount
 		);
@@ -233,9 +237,16 @@ describe("Funds", function () {
 		expect(positionMintedEvent).to.be.not.null;
 		const tokenId = positionMintedEvent[0]?.args?.tokenId;
 
+		// advance time by one hour and mine a new block
+		await time.increase(2 * 3600 * 24 * 30 + 1);
+
 		// Burn position
 		await funds.connect(assetManager).redeemLpPosition(tokenId);
 	});
+
+	// User should deposit, swap, LP, close position and withdraw
+
+	// Multiple users should deposit, swap, LP, close position and withdraw
 });
 
 async function depositToFundsContract(stablecoin, funds, user, depositAmount) {

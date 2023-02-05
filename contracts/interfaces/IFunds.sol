@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Unlicensed
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
 interface IFunds {
@@ -12,11 +12,6 @@ interface IFunds {
      * @notice for users to withdraw their deposits, inclusive of the yield earned (or loss)
      */
     function withdraw() external;
-
-    /**
-     * @notice for fund manager to close all positions in Uniswap and Aave and obtain stablecoin
-     */
-    function unwindAllPositions() external;
 
     /**
      * @notice for fund manager to swap tokens in Uniswap

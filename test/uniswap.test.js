@@ -162,6 +162,11 @@ describe("Uniswap", () => {
 
 		const tokenIds = await uniswapLp.connect(addr1).getLpPositionsTokenIds();
 		expect(tokenIds.length).to.be.gt(0);
+
+		const activeLpPositions = await uniswapLp
+			.connect(addr1)
+			.getActiveLpPositions();
+		expect(activeLpPositions.length).to.be.gt(0);
 	});
 
 	it("Should mint LP position, increase & decrease liquidity", async () => {
@@ -225,19 +230,22 @@ describe("Uniswap", () => {
 				addr1.address
 			);
 
-		const newLiquidity = ethers.utils.parseUnits("1000", stablecoinDecimals);
+		const liquidityToDecrease = ethers.utils.parseUnits(
+			"1000",
+			stablecoinDecimals
+		);
 
-		console.log(1);
+		const tokenIdToLpPositions = await uniswapLp.connect(addr1)
+			.tokenIdToLpPositions;
+
+		const lpPosition = await tokenIdToLpPositions(tokenId);
+		const prevLiquidity = lpPosition.liquidity;
 
 		const tx1 = await uniswapLp
 			.connect(addr1)
-			.decreasePositionLiquidity(tokenId, newLiquidity, addr1.address);
-
-		console.log(2);
+			.decreasePositionLiquidity(tokenId, liquidityToDecrease, addr1.address);
 
 		const receipt1 = await tx1.wait();
-
-		console.log(3);
 
 		const positionLiquidityDecreased = receipt1.events?.filter((x) => {
 			return x?.event == "PositionLiquidityModified";
@@ -247,13 +255,19 @@ describe("Uniswap", () => {
 		const liquidityEvent = positionLiquidityDecreased[0].args.liquidity;
 
 		// Check if liquidity is correct
-		expect(liquidityEvent).to.be.eq(newLiquidity);
+		expect(liquidityEvent).to.be.eq(prevLiquidity.sub(liquidityToDecrease));
 
 		const tokenIds = await uniswapLp.connect(addr1).getLpPositionsTokenIds();
 		expect(tokenIds.length).to.be.gt(0);
+
+		const activeLpPositions = await uniswapLp
+			.connect(addr1)
+			.getActiveLpPositions();
+		expect(activeLpPositions.length).to.be.gt(0);
+		console.log(activeLpPositions);
 	});
 
-	it("Should mint & burn LP position", async () => {
+	it("Should mint & collect LP fees", async () => {
 		const receiver = await addr1.getAddress();
 		const usdcAmount = ethers.utils.parseUnits("2000", stablecoinDecimals);
 		const wethAmount = ethers.utils.parseUnits("1", ethDecimals);
@@ -287,17 +301,55 @@ describe("Uniswap", () => {
 		expect(positionMintedEvent).to.be.not.null;
 		const tokenId = positionMintedEvent[0].args.tokenId;
 
-		// Burn position
-		await uniswapLp.connect(addr1).redeemPosition(tokenId);
+		await uniswapLp.connect(addr1).collectFees(tokenId);
+	});
 
-		const tokenIds = await uniswapLp.connect(addr1).getLpPositionsTokenIds();
-		expect(tokenIds.length).to.be.eq(0);
+	it("Should mint, decrease liquidity & burn LP position", async () => {
+		const receiver = await addr1.getAddress();
+		const usdcAmount = ethers.utils.parseUnits("2000", stablecoinDecimals);
+		const wethAmount = ethers.utils.parseUnits("1", ethDecimals);
+
+		// Transfer USDC and WETH to receiver
+		await usdc.connect(usdcWhale).transfer(receiver, usdcAmount);
+		await weth.connect(wethWhale).transfer(addr1.address, wethAmount);
+
+		// Approve
+		await usdc.connect(addr1).approve(uniswapLp.address, usdcAmount);
+		await weth.connect(addr1).approve(uniswapLp.address, wethAmount);
+
+		const tx = await uniswapLp
+			.connect(addr1)
+			.mintPosition(
+				USDC_ADDRESS,
+				usdcAmount,
+				WETH_ADDRESS,
+				wethAmount,
+				0,
+				0,
+				POOL_FEE
+			);
+
+		const receipt = await tx.wait();
+
+		const positionMintedEvent = receipt.events?.filter((x) => {
+			return x?.event == "PositionMinted";
+		});
+
+		expect(positionMintedEvent).to.be.not.null;
+		const tokenId = positionMintedEvent[0].args.tokenId;
+		const liquidity = positionMintedEvent[0].args.liquidity;
+
+		await uniswapLp
+			.connect(addr1)
+			.decreasePositionLiquidity(tokenId, liquidity, addr1.address);
+		await uniswapLp.connect(addr1).collectFees(tokenId);
+
+		await uniswapLp.connect(addr1).burnPosition(tokenId);
 	});
 });
 
 /**
- * 1. Write tests for "increase" & "decrease" liquidity
  * 2. Review "functions" to see what can be removed and what can be added
- * 3. Fix potential deletion issues (e.g. if a position is deleted, the tokenId is not removed from the array)
  * 4. Look into hard-coded TICK_SPACINGS
+ * 5. Write tests for "unwinding" all positions in fund
  */

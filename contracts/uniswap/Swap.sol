@@ -26,7 +26,6 @@ contract Swap {
         // Approve pool to spend tokenIn
         TransferHelper.safeApprove(_tokenIn, address(swapRouter), _amountIn);
 
-
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
             tokenIn: _tokenIn,
             tokenOut: _tokenOut,

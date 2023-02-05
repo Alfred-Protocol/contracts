@@ -1,5 +1,6 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
+require("hardhat-abi-exporter");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -20,16 +21,16 @@ module.exports = {
 		avax: {
 			url: "https://api.avax.network/ext/bc/C/rpc",
 			chainId: 43114,
-			accounts: [process.env.PRIVATE_KEY],
+			accounts: [process.env.MUMBAI_PRIVATE_KEY],
 		},
 		fuji: {
 			url: "https://api.avax-test.network/ext/bc/C/rpc",
 			chainId: 43113,
-			accounts: [process.env.PRIVATE_KEY],
+			accounts: [process.env.MUMBAI_PRIVATE_KEY],
 		},
 		goerli: {
 			url: `https://eth-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY_GOERLI}`,
-			accounts: [process.env.PRIVATE_KEY],
+			accounts: [process.env.MUMBAI_PRIVATE_KEY],
 		},
 		hardhat: {
 			forking: {
@@ -41,5 +42,13 @@ module.exports = {
 			url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY_MUMBAI}`,
 			accounts: [process.env.MUMBAI_PRIVATE_KEY],
 		},
+	},
+	abiExporter: {
+		path: "./data/abi",
+		runOnCompile: true,
+		clear: true,
+		flat: true,
+		spacing: 2,
+		pretty: true,
 	},
 };

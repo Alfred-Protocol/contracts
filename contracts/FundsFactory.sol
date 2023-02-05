@@ -4,7 +4,9 @@ pragma solidity ^0.8.9;
 import {Funds} from "./Funds.sol";
 
 contract FundsFactory {
-    mapping(address => Funds) public managerToFundsAddress;
+    // Single manager can have many "Funds"
+    mapping(address => Funds[]) public managerToFundsAddresses;
+
     Funds[] public funds;
     address[] public fundAddresses;
 
@@ -32,16 +34,16 @@ contract FundsFactory {
             uniswapNonFungiblePositionManagerAddress,
             msg.sender
         );
-        managerToFundsAddress[msg.sender] = fundsContract;
+        managerToFundsAddresses[msg.sender].push(fundsContract);
         funds.push(fundsContract);
         fundAddresses.push(address(fundsContract));
     }
 
-    function getAllFunds() public view returns (Funds[] memory) {
-        return funds;
-    }
-
-    function getFundsByManager(address _manager) public view returns (Funds) {
-        return managerToFundsAddress[_manager];
+    function getFundsByManager(address _manager)
+        public
+        view
+        returns (Funds[] memory)
+    {
+        return managerToFundsAddresses[_manager];
     }
 }

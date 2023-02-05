@@ -12,5 +12,6 @@ library SharedStructs {
         address token1;
         int24 tickLower;
         int24 tickUpper;
+        uint24 poolFee;
     }
 }

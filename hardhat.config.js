@@ -15,22 +15,22 @@ module.exports = {
 		},
 	},
 	etherscan: {
-		apiKey: process.env.ETHERSCAN_API_KEY,
+		apiKey: process.env.POLYGONSCAN_API_KEY,
 	},
 	networks: {
 		avax: {
 			url: "https://api.avax.network/ext/bc/C/rpc",
 			chainId: 43114,
-			accounts: [process.env.MUMBAI_PRIVATE_KEY],
+			accounts: [process.env.PRIVATE_KEY],
 		},
 		fuji: {
 			url: "https://api.avax-test.network/ext/bc/C/rpc",
 			chainId: 43113,
-			accounts: [process.env.MUMBAI_PRIVATE_KEY],
+			accounts: [process.env.PRIVATE_KEY],
 		},
 		goerli: {
 			url: `https://eth-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY_GOERLI}`,
-			accounts: [process.env.MUMBAI_PRIVATE_KEY],
+			accounts: [process.env.PRIVATE_KEY],
 		},
 		hardhat: {
 			forking: {
@@ -40,7 +40,7 @@ module.exports = {
 		},
 		mumbai: {
 			url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY_MUMBAI}`,
-			accounts: [process.env.MUMBAI_PRIVATE_KEY],
+			accounts: [process.env.PRIVATE_KEY],
 		},
 	},
 	abiExporter: {

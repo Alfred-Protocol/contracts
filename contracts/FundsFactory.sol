@@ -24,7 +24,8 @@ contract FundsFactory {
     function createNewFund(
         address _stablecoinAddress,
         uint256 _startDate,
-        uint256 _matureDate
+        uint256 _matureDate,
+        string memory _fundName
     ) public {
         Funds fundsContract = new Funds(
             _stablecoinAddress,
@@ -32,7 +33,8 @@ contract FundsFactory {
             _matureDate,
             uniswapAdapterAddress,
             uniswapNonFungiblePositionManagerAddress,
-            msg.sender
+            msg.sender,
+            _fundName
         );
         managerToFundsAddresses[msg.sender].push(fundsContract);
         funds.push(fundsContract);

@@ -41,8 +41,12 @@ contract FundsFactory {
         fundAddresses.push(address(fundsContract));
     }
 
+    function getAllFunds() external view returns (Funds[] memory) {
+        return funds;
+    }
+
     function getFundsByManager(address _manager)
-        public
+        external
         view
         returns (Funds[] memory)
     {

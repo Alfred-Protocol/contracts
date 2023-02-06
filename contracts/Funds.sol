@@ -26,6 +26,7 @@ contract Funds is IFunds {
 
     // Manager of fund
     address public fundManager;
+    string public fundName;
 
     // How much each depositor has deposited (initially)
     EnumerableMap.AddressToUintMap private depositorToAmount;
@@ -69,7 +70,8 @@ contract Funds is IFunds {
         uint256 _matureDate,
         address _uniswapswapAdapterAddress,
         address _uniswapNonFungiblePositionManagerAddress,
-        address _fundManager
+        address _fundManager,
+        string memory _fundName
     ) {
         require(
             _startDate < _matureDate,
@@ -84,9 +86,14 @@ contract Funds is IFunds {
             _uniswapNonFungiblePositionManagerAddress
         );
         fundManager = _fundManager;
+        fundName = _fundName;
     }
 
-    function depositedAmount(address _depositor) public view returns (uint256) {
+    function depositedAmount(address _depositor)
+        external
+        view
+        returns (uint256)
+    {
         (, uint256 amount) = EnumerableMap.tryGet(
             depositorToAmount,
             _depositor
@@ -116,7 +123,7 @@ contract Funds is IFunds {
         EnumerableMap.set(tokenToAmount, _token, existingAmount - _amount);
     }
 
-    function deposit(uint256 _amount) public beforeStartDate {
+    function deposit(uint256 _amount) external beforeStartDate {
         require(_amount > 0, "Amount deposited must be greater than 0");
 
         totalValueLocked += _amount;
@@ -137,7 +144,7 @@ contract Funds is IFunds {
         stablecoin.transferFrom(msg.sender, address(this), _amount);
     }
 
-    function withdraw() public afterEndDate {
+    function withdraw() external afterEndDate {
         (, uint256 initialDepositedAmount) = EnumerableMap.tryGet(
             depositorToAmount,
             msg.sender
@@ -177,7 +184,7 @@ contract Funds is IFunds {
         int24 lowerTick,
         int24 upperTick,
         uint24 poolFee
-    ) public _onlyFundManager {
+    ) external _onlyFundManager {
         IERC20Metadata(token0).approve(address(liquidityProvider), amount0);
         IERC20Metadata(token1).approve(address(liquidityProvider), amount1);
 
@@ -270,7 +277,7 @@ contract Funds is IFunds {
     }
 
     // Anyone can call this function to redeem the LP position
-    function redeemAllLpPositions() public afterEndDate {
+    function redeemAllLpPositions() external afterEndDate {
         uint256[] memory tokenIds = liquidityProvider.getLpPositionsTokenIds();
         for (uint256 i = 0; i < tokenIds.length; i++) {
             // Collect fees, decrease liquidity & burn NFT
@@ -296,14 +303,14 @@ contract Funds is IFunds {
     }
 
     function fetchAllLpPositions()
-        public
+        external
         view
         returns (SharedStructs.LPPosition[] memory)
     {
         return liquidityProvider.getActiveLpPositions();
     }
 
-    function fetchLpTokenIds() public view returns (uint256[] memory) {
+    function fetchLpTokenIds() external view returns (uint256[] memory) {
         return liquidityProvider.getLpPositionsTokenIds();
     }
 }

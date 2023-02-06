@@ -1,15 +1,19 @@
 {
-  "devDependencies": {
-    "@certusone/wormhole-sdk": "^0.9.9",
-    "@nomicfoundation/hardhat-toolbox": "^1.0.2",
-    "@openzeppelin/contracts": "^4.8.1",
-    "@uniswap/v3-core": "github:Uniswap/v3-core#0.8",
-    "@uniswap/v3-periphery": "github:Uniswap/v3-periphery#0.8",
-    "hardhat": "^2.12.6",
-    "hardhat-abi-exporter": "^2.10.1",
-    "hardhat-etherscan": "^1.0.1"
-  },
-  "dependencies": {
-    "dotenv": "^16.0.3"
-  }
+	"devDependencies": {
+		"@certusone/wormhole-sdk": "^0.9.9",
+		"@nomicfoundation/hardhat-toolbox": "^1.0.2",
+		"@openzeppelin/contracts": "^4.8.1",
+		"@uniswap/v3-core": "github:Uniswap/v3-core#0.8",
+		"@uniswap/v3-periphery": "github:Uniswap/v3-periphery#0.8",
+		"hardhat": "^2.12.6",
+		"hardhat-abi-exporter": "^2.10.1",
+		"hardhat-etherscan": "^1.0.1"
+	},
+	"dependencies": {
+		"dotenv": "^16.0.3"
+	},
+	"scripts": {
+		"deploy-mumbai": "npx hardhat run scripts/deploy-fund.js --network mumbai",
+		"test": "npx hardhat test"
+	}
 }

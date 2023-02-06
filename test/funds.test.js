@@ -52,7 +52,7 @@ describe("Funds", function () {
 
 		await fundsFactory
 			.connect(assetManager)
-			.createNewFund(stablecoinAddress, startDate, endDate);
+			.createNewFund(stablecoinAddress, startDate, endDate, "Stablecoin Fund");
 
 		const fundsAddresses = await fundsFactory.getFundsByManager(
 			await assetManager.getAddress()

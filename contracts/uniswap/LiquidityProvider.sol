@@ -18,7 +18,6 @@ contract LiquidityProvider is IERC721Receiver {
     using EnumerableSet for EnumerableSet.UintSet;
     int24 private constant TICK_SPACING = 60;
 
-    address public fundAddress;
     INonfungiblePositionManager public immutable nftPositionsManager;
 
     /**
@@ -33,7 +32,6 @@ contract LiquidityProvider is IERC721Receiver {
 
 
     constructor(address _nftPositionsManager) {
-        fundAddress = msg.sender;
         nftPositionsManager = INonfungiblePositionManager(_nftPositionsManager);
     }
 
@@ -82,6 +80,7 @@ contract LiquidityProvider is IERC721Receiver {
         delete tokenIdToLpPositions[tokenId];
     }
 
+    // TODO: Fix "safeTransfer" to msg.sender here
     function _sendToFundsContract(
         uint256 tokenId,
         uint256 amount0,
@@ -89,9 +88,9 @@ contract LiquidityProvider is IERC721Receiver {
     ) internal {
         SharedStructs.LPPosition memory deposit = tokenIdToLpPositions[tokenId];
         // Transfer token0 to contract
-        TransferHelper.safeTransfer(deposit.token0, fundAddress, amount0);
+        TransferHelper.safeTransfer(deposit.token0, msg.sender, amount0);
         // Transfer token1 to contract
-        TransferHelper.safeTransfer(deposit.token1, fundAddress, amount1);
+        TransferHelper.safeTransfer(deposit.token1, msg.sender, amount1);
     }
 
     
@@ -296,13 +295,6 @@ contract LiquidityProvider is IERC721Receiver {
         SharedStructs.LPPosition storage lpPosition = tokenIdToLpPositions[tokenId];
     
         return (amount0, amount1, lpPosition.token0, lpPosition.token1);
-    }
-
-    function transferToFund(
-        address token,
-        uint256 amount
-    ) public {
-        TransferHelper.safeTransfer(token, fundAddress, amount);
     }
 
     function burnPosition(

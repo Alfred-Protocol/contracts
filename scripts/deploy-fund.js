@@ -1,8 +1,8 @@
 const { ethers, run } = require("hardhat");
-
-const NonfungiblePositionManagerAddress =
-	"0xC36442b4a4522E871399CD717aBDD847Ab11FE88";
-const SwapRouterAddress = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
+const {
+	UNI_SWAP_ROUTER_ADDRESS,
+	UNI_NON_FUNGIBLE_POSITION_MANAGER_ADDRESS,
+} = require("../constants/index");
 
 async function main() {
 	const [deployer] = await ethers.getSigners();
@@ -12,8 +12,8 @@ async function main() {
 
 	const FundsFactory = await ethers.getContractFactory("FundsFactory");
 	const fundsFactory = await FundsFactory.deploy(
-		SwapRouterAddress,
-		NonfungiblePositionManagerAddress
+		UNI_SWAP_ROUTER_ADDRESS,
+		UNI_NON_FUNGIBLE_POSITION_MANAGER_ADDRESS
 	);
 
 	console.log(`FundsFactory deployed to: ${fundsFactory.address}`);
@@ -23,7 +23,10 @@ async function main() {
 
 	await run("verify:verify", {
 		address: fundsFactory.address,
-		// constructorArguments: [],
+		constructorArguments: [
+			UNI_SWAP_ROUTER_ADDRESS,
+			UNI_NON_FUNGIBLE_POSITION_MANAGER_ADDRESS,
+		],
 	});
 }
 

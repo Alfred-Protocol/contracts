@@ -1,5 +1,6 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
+require("hardhat-abi-exporter");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -14,7 +15,7 @@ module.exports = {
 		},
 	},
 	etherscan: {
-		apiKey: process.env.ETHERSCAN_API_KEY,
+		apiKey: process.env.POLYGONSCAN_API_KEY,
 	},
 	networks: {
 		avax: {
@@ -39,7 +40,15 @@ module.exports = {
 		},
 		mumbai: {
 			url: `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY_MUMBAI}`,
-			accounts: [process.env.MUMBAI_PRIVATE_KEY],
+			accounts: [process.env.PRIVATE_KEY],
 		},
+	},
+	abiExporter: {
+		path: "./data/abi",
+		runOnCompile: true,
+		clear: true,
+		flat: true,
+		spacing: 2,
+		pretty: true,
 	},
 };

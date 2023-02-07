@@ -26,7 +26,6 @@ contract Funds is IFunds {
 
     // Manager of fund
     address public fundManager;
-    string public fundName;
 
     // How much each depositor has deposited (initially)
     EnumerableMap.AddressToUintMap private depositorToAmount;
@@ -70,8 +69,7 @@ contract Funds is IFunds {
         uint256 _matureDate,
         address _uniswapswapAdapterAddress,
         address _uniswapNonFungiblePositionManagerAddress,
-        address _fundManager,
-        string memory _fundName
+        address _fundManager
     ) {
         require(
             _startDate < _matureDate,
@@ -86,7 +84,6 @@ contract Funds is IFunds {
             _uniswapNonFungiblePositionManagerAddress
         );
         fundManager = _fundManager;
-        fundName = _fundName;
     }
 
     function depositedAmount(address _depositor)

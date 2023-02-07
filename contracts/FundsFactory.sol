@@ -4,6 +4,8 @@ pragma solidity ^0.8.9;
 import {Funds} from "./Funds.sol";
 
 contract FundsFactory {
+    event NewFundCreated(address indexed _fundAddress);
+
     // Single manager can have many "Funds"
     mapping(address => Funds[]) public managerToFundsAddresses;
 
@@ -24,8 +26,7 @@ contract FundsFactory {
     function createNewFund(
         address _stablecoinAddress,
         uint256 _startDate,
-        uint256 _matureDate,
-        string memory _fundName
+        uint256 _matureDate
     ) public {
         Funds fundsContract = new Funds(
             _stablecoinAddress,
@@ -33,12 +34,13 @@ contract FundsFactory {
             _matureDate,
             uniswapAdapterAddress,
             uniswapNonFungiblePositionManagerAddress,
-            msg.sender,
-            _fundName
+            msg.sender
         );
         managerToFundsAddresses[msg.sender].push(fundsContract);
         funds.push(fundsContract);
         fundAddresses.push(address(fundsContract));
+
+        emit NewFundCreated(address(fundsContract));
     }
 
     function getAllFunds() external view returns (Funds[] memory) {

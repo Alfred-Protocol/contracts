@@ -13,6 +13,8 @@ contract FundsFactory {
     address private uniswapAdapterAddress;
     address private uniswapNonFungiblePositionManagerAddress;
 
+    event FundCreated(address fund, address manager);
+
     constructor(
         address _uniswapAdapterAddress,
         address _uniswapNonFungiblePositionManagerAddress
@@ -36,6 +38,7 @@ contract FundsFactory {
             msg.sender,
             _fundName
         );
+        emit FundCreated(address(fundsContract), msg.sender);
         managerToFundsAddresses[msg.sender].push(fundsContract);
         funds.push(fundsContract);
         fundAddresses.push(address(fundsContract));
@@ -45,11 +48,9 @@ contract FundsFactory {
         return funds;
     }
 
-    function getFundsByManager(address _manager)
-        external
-        view
-        returns (Funds[] memory)
-    {
+    function getFundsByManager(
+        address _manager
+    ) external view returns (Funds[] memory) {
         return managerToFundsAddresses[_manager];
     }
 }

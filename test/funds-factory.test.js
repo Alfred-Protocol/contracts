@@ -40,7 +40,7 @@ describe("Funds Factory", function () {
 
 		await fundsFactory
 			.connect(assetManager)
-			.createNewFund(stablecoinAddress, startDate, endDate, "Stablecoin Fund");
+			.createNewFund(stablecoinAddress, startDate, endDate);
 
 		const fundsAddresses = await fundsFactory.getFundsByManager(
 			assetManager.address
@@ -67,16 +67,11 @@ describe("Funds Factory", function () {
 
 		await fundsFactory
 			.connect(assetManager)
-			.createNewFund(stablecoinAddress, startDate, endDate, "Normal fund");
+			.createNewFund(stablecoinAddress, startDate, endDate);
 
 		await fundsFactory
 			.connect(assetManager)
-			.createNewFund(
-				stablecoinAddress,
-				endDate,
-				endDate + 3600 * 24 * 30,
-				"Stablecoin Fund"
-			);
+			.createNewFund(stablecoinAddress, endDate, endDate + 3600 * 24 * 30);
 
 		const fundsAddresses = await fundsFactory.getFundsByManager(
 			assetManager.address

@@ -12,8 +12,8 @@ const ethDecimals = 18;
 const POOL_FEE = 3000;
 
 // https://www.whalestats.com/analysis-of-the-top-100-eth-wallets
-const USDC_WHALE = "0x6555e1CC97d3cbA6eAddebBCD7Ca51d75771e0B8";
-const WETH_WHALE = "0x6555e1CC97d3cbA6eAddebBCD7Ca51d75771e0B8";
+const UNI_WHALE = "0x41653c7d61609D856f29355E404F310Ec4142Cfb";
+const WETH_WHALE = "0x20918f71e99C09aE2ac3E33DbDe33457d3be01f4";
 
 const UNI_SWAP_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
 
@@ -44,7 +44,7 @@ describe("Uniswap", () => {
 		// Unlock whales
 		await network.provider.request({
 			method: "hardhat_impersonateAccount",
-			params: [USDC_WHALE],
+			params: [UNI_WHALE],
 		});
 
 		await network.provider.request({
@@ -53,7 +53,7 @@ describe("Uniswap", () => {
 		});
 
 		// Control whales
-		usdcWhale = await ethers.getSigner(USDC_WHALE);
+		usdcWhale = await ethers.getSigner(UNI_WHALE);
 		wethWhale = await ethers.getSigner(WETH_WHALE);
 	});
 

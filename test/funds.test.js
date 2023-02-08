@@ -5,11 +5,12 @@ const { time } = require("@nomicfoundation/hardhat-network-helpers");
 const {
 	UNI_NFT_MANAGER,
 	WETH_ADDRESS,
-	USDC_ADDRESS,
+	UNI_ADDRESS,
 	UNI_SWAP_ROUTER_ADDRESS,
 } = require("../constants/index");
 
 const POOL_FEE = 3000;
+const whale = "0x41653c7d61609D856f29355E404F310Ec4142Cfb";
 
 describe("Funds", function () {
 	let assetManager, user, user1;
@@ -37,7 +38,7 @@ describe("Funds", function () {
 			uniswapNftAdapter.address
 		);
 
-		stablecoinAddress = USDC_ADDRESS; // USDC Ethereum mainnet address
+		stablecoinAddress = UNI_ADDRESS; // USDC Ethereum mainnet address
 		stablecoin = await ethers.getContractAt(
 			"IERC20Metadata",
 			stablecoinAddress
@@ -52,7 +53,7 @@ describe("Funds", function () {
 
 		await fundsFactory
 			.connect(assetManager)
-			.createNewFund(stablecoinAddress, startDate, endDate, "Stablecoin Fund");
+			.createNewFund(stablecoinAddress, startDate, endDate);
 
 		const fundsAddresses = await fundsFactory.getFundsByManager(
 			await assetManager.getAddress()
@@ -66,12 +67,8 @@ describe("Funds", function () {
 		funds = await ethers.getContractAt("Funds", fundsAddress);
 
 		// get a USDC whale to transfer some USDC to the user (for mainnet forking test)
-		await ethers.provider.send("hardhat_impersonateAccount", [
-			"0xda9ce944a37d218c3302f6b82a094844c6eceb17",
-		]);
-		const usdcWhale = ethers.provider.getSigner(
-			"0xda9ce944a37d218c3302f6b82a094844c6eceb17"
-		);
+		await ethers.provider.send("hardhat_impersonateAccount", [whale]);
+		const usdcWhale = ethers.provider.getSigner(whale);
 
 		await stablecoin
 			.connect(usdcWhale)
@@ -118,7 +115,7 @@ describe("Funds", function () {
 		);
 
 		const wethToken = await ethers.getContractAt("IERC20", WETH_ADDRESS);
-		const usdcToken = await ethers.getContractAt("IERC20", USDC_ADDRESS);
+		const usdcToken = await ethers.getContractAt("IERC20", UNI_ADDRESS);
 
 		// swap USDC to WETH
 		usdcToken
@@ -128,7 +125,7 @@ describe("Funds", function () {
 		await funds
 			.connect(assetManager)
 			.swapTokens(
-				USDC_ADDRESS,
+				UNI_ADDRESS,
 				WETH_ADDRESS,
 				ethers.utils.parseUnits("1000", stablecoinDecimals)
 			);
@@ -150,7 +147,7 @@ describe("Funds", function () {
 		);
 
 		const wethToken = await ethers.getContractAt("IERC20", WETH_ADDRESS);
-		const usdcToken = await ethers.getContractAt("IERC20", USDC_ADDRESS);
+		const usdcToken = await ethers.getContractAt("IERC20", UNI_ADDRESS);
 
 		// swap USDC to WETH
 		usdcToken
@@ -160,7 +157,7 @@ describe("Funds", function () {
 		await funds
 			.connect(assetManager)
 			.swapTokens(
-				USDC_ADDRESS,
+				UNI_ADDRESS,
 				WETH_ADDRESS,
 				ethers.utils.parseUnits("500", stablecoinDecimals)
 			);
@@ -178,7 +175,7 @@ describe("Funds", function () {
 			.approve(funds.address, ethers.constants.MaxUint256);
 
 		await funds.createLpPosition(
-			USDC_ADDRESS,
+			UNI_ADDRESS,
 			WETH_ADDRESS,
 			ethers.utils.parseUnits("500", stablecoinDecimals),
 			ethers.utils.parseUnits("0.25", 18),
@@ -201,7 +198,7 @@ describe("Funds", function () {
 		);
 
 		const wethToken = await ethers.getContractAt("IERC20", WETH_ADDRESS);
-		const usdcToken = await ethers.getContractAt("IERC20", USDC_ADDRESS);
+		const usdcToken = await ethers.getContractAt("IERC20", UNI_ADDRESS);
 
 		// swap USDC to WETH
 		usdcToken
@@ -211,7 +208,7 @@ describe("Funds", function () {
 		await funds
 			.connect(assetManager)
 			.swapTokens(
-				USDC_ADDRESS,
+				UNI_ADDRESS,
 				WETH_ADDRESS,
 				ethers.utils.parseUnits("500", stablecoinDecimals)
 			);
@@ -229,7 +226,7 @@ describe("Funds", function () {
 			.approve(funds.address, ethers.constants.MaxUint256);
 
 		const tx = await funds.createLpPosition(
-			USDC_ADDRESS,
+			UNI_ADDRESS,
 			WETH_ADDRESS,
 			ethers.utils.parseUnits("500", stablecoinDecimals),
 			ethers.utils.parseUnits("0.25", 18),
@@ -268,7 +265,7 @@ describe("Funds", function () {
 		);
 
 		const wethToken = await ethers.getContractAt("IERC20", WETH_ADDRESS);
-		const usdcToken = await ethers.getContractAt("IERC20", USDC_ADDRESS);
+		const usdcToken = await ethers.getContractAt("IERC20", UNI_ADDRESS);
 
 		// swap USDC to WETH
 		usdcToken
@@ -278,7 +275,7 @@ describe("Funds", function () {
 		await funds
 			.connect(assetManager)
 			.swapTokens(
-				USDC_ADDRESS,
+				UNI_ADDRESS,
 				WETH_ADDRESS,
 				ethers.utils.parseUnits("500", stablecoinDecimals)
 			);
@@ -296,7 +293,7 @@ describe("Funds", function () {
 			.approve(funds.address, ethers.constants.MaxUint256);
 
 		const tx = await funds.createLpPosition(
-			USDC_ADDRESS,
+			UNI_ADDRESS,
 			WETH_ADDRESS,
 			ethers.utils.parseUnits("500", stablecoinDecimals),
 			wethBalance,
@@ -356,7 +353,7 @@ describe("Funds", function () {
 		expect(await funds.depositedAmount(user1.address)).to.equal(depositAmount1);
 
 		const wethToken = await ethers.getContractAt("IERC20", WETH_ADDRESS);
-		const usdcToken = await ethers.getContractAt("IERC20", USDC_ADDRESS);
+		const usdcToken = await ethers.getContractAt("IERC20", UNI_ADDRESS);
 
 		// swap USDC to WETH
 		usdcToken
@@ -366,7 +363,7 @@ describe("Funds", function () {
 		await funds
 			.connect(assetManager)
 			.swapTokens(
-				USDC_ADDRESS,
+				UNI_ADDRESS,
 				WETH_ADDRESS,
 				ethers.utils.parseUnits("750", stablecoinDecimals)
 			);
@@ -388,7 +385,7 @@ describe("Funds", function () {
 			.approve(funds.address, ethers.constants.MaxUint256);
 
 		const tx = await funds.createLpPosition(
-			USDC_ADDRESS,
+			UNI_ADDRESS,
 			WETH_ADDRESS,
 			ethers.utils.parseUnits("750", stablecoinDecimals),
 			wethBalance,

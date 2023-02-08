@@ -1,7 +1,7 @@
 const { ethers, run } = require("hardhat");
 const {
 	UNI_SWAP_ROUTER_ADDRESS,
-	UNI_NON_FUNGIBLE_POSITION_MANAGER_ADDRESS,
+	UNI_NFT_MANAGER,
 } = require("../constants/index");
 
 async function main() {
@@ -13,7 +13,7 @@ async function main() {
 	const FundsFactory = await ethers.getContractFactory("FundsFactory");
 	const fundsFactory = await FundsFactory.deploy(
 		UNI_SWAP_ROUTER_ADDRESS,
-		UNI_NON_FUNGIBLE_POSITION_MANAGER_ADDRESS
+		UNI_NFT_MANAGER
 	);
 
 	console.log(`FundsFactory deployed to: ${fundsFactory.address}`);
@@ -23,10 +23,7 @@ async function main() {
 
 	await run("verify:verify", {
 		address: fundsFactory.address,
-		constructorArguments: [
-			UNI_SWAP_ROUTER_ADDRESS,
-			UNI_NON_FUNGIBLE_POSITION_MANAGER_ADDRESS,
-		],
+		constructorArguments: [UNI_SWAP_ROUTER_ADDRESS, UNI_NFT_MANAGER],
 	});
 }
 

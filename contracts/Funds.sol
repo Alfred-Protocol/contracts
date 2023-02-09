@@ -34,6 +34,7 @@ contract Funds is IFunds {
     EnumerableMap.AddressToUintMap private tokenToAmount;
 
     event PositionMinted(uint256 tokenId);
+    event FundDeposited(address indexed depositor, uint256 amount);
 
     modifier beforeStartDate() {
         if (block.timestamp > startDate) {
@@ -141,14 +142,20 @@ contract Funds is IFunds {
         stablecoin.transferFrom(msg.sender, address(this), _amount);
     }
 
-    function withdraw() external afterEndDate {
+    function withdraw() external {
         (, uint256 initialDepositedAmount) = EnumerableMap.tryGet(
             depositorToAmount,
             msg.sender
         );
 
+        uint256 depositShare = (initialDepositedAmount / totalValueLocked);
+
+        if (totalStablecoinAfterUnwind == 0) {
+            totalStablecoinAfterUnwind = totalValueLocked;
+        }
         uint256 entitledAmount = (initialDepositedAmount / totalValueLocked) *
             totalStablecoinAfterUnwind;
+
         totalValueLocked -= initialDepositedAmount;
         EnumerableMap.set(depositorToAmount, msg.sender, 0);
 

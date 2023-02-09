@@ -150,11 +150,8 @@ contract Funds is IFunds {
 
         uint256 depositShare = (initialDepositedAmount / totalValueLocked);
 
-        if (totalStablecoinAfterUnwind == 0) {
-            totalStablecoinAfterUnwind = totalValueLocked;
-        }
-        uint256 entitledAmount = (initialDepositedAmount / totalValueLocked) *
-            totalStablecoinAfterUnwind;
+        // TODO: @andyrobert3 fix this to be the correct amount
+        uint256 entitledAmount = initialDepositedAmount;
 
         totalValueLocked -= initialDepositedAmount;
         EnumerableMap.set(depositorToAmount, msg.sender, 0);
